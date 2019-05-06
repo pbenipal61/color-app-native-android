@@ -8,7 +8,6 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.postmaninteractive.colorapp.MainActivity;
@@ -19,8 +18,8 @@ import java.util.List;
 
 public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAdapter.ColorItemViewHolder> {
 
-    private Context context;
-    private List<ColorItem> colorItems;
+    private final Context context;
+    private final List<ColorItem> colorItems;
 
     public ColorItemsViewAdapter(Context context, List<ColorItem> colorItems) {
         this.context = context;
@@ -45,7 +44,7 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
             @Override
             public void onClick(View v) {
                 MainActivity mainActivity = (MainActivity) context;
-                mainActivity.setAsBackgroundColor(Color.parseColor(colorItem.getColorString()));
+                mainActivity.setAsBackgroundColor(Color.parseColor(colorItem.getColorString()), colorItem.getColorString());
             }
         });
 
@@ -56,23 +55,24 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
         return colorItems.size();
     }
 
-    public static class ColorItemViewHolder extends RecyclerView.ViewHolder{
+    static class ColorItemViewHolder extends RecyclerView.ViewHolder {
 
-        private CardView cvColor;
-        private TextView tvName;
-        public ColorItemViewHolder(@NonNull View itemView) {
+        private final CardView cvColor;
+        private final TextView tvName;
+
+        private ColorItemViewHolder(@NonNull View itemView) {
             super(itemView);
 
             cvColor = itemView.findViewById(R.id.cvColor);
             tvName = itemView.findViewById(R.id.tvName);
         }
 
-        public void setBackgroundColor(String colorString){
+        private void setBackgroundColor(String colorString) {
 
             cvColor.setBackgroundColor(Color.parseColor(colorString));
         }
 
-        public void setColorName(String name){
+        private void setColorName(String name) {
             tvName.setText(name);
         }
     }
