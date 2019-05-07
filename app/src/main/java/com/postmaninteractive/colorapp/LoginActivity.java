@@ -1,8 +1,10 @@
 package com.postmaninteractive.colorapp;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -42,7 +44,7 @@ public class LoginActivity extends AppCompatActivity {
     private ProgressBar progressBar;                        // ProgressBar reference
     private Button loginButton;                             // Login button reference
     private RelativeLayout rlMainLayout;                    // Main layout reference
-    private final int numberOfTriesForConnectionCheck = 10;       // Number of times app should try to make a connection with the user before notifying the user
+    private final int numberOfTriesForConnectionCheck = 15;       // Number of times app should try to make a connection with the user before notifying the user
     private Snackbar serverConnectionFailedSnackBar = null; // Reference to server connection failed SnackBar
     private int triesToLoadStorageData = 0;                 // Number of times app has tried to load storage data
     private int triesToLogin = 0;                           // Number of times the app tried to login
@@ -51,6 +53,9 @@ public class LoginActivity extends AppCompatActivity {
     private final String colorPaletteMessage ="Loading color palette!";   // Message when MainActivity is being loaded
     private final String loadingDataMessage = "Loading data ...";  // Message on trying to load data from the server
     private final String loadingStorageIdMessage="Getting storage id ..."; //Message on trying to load a storage id
+    private AlertDialog alertDialog;                  // AlertDialog to ask user if they want continue without saving data
+    private Boolean askedUserForSaveMode = false;     // Track of if the user has been offered without save mode. The user if offered this mode only once
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,7 +145,7 @@ public class LoginActivity extends AppCompatActivity {
         loginCall.enqueue(new Callback<LoginData.LoginResponse>() {
             @Override
             public void onResponse(Call<LoginData.LoginResponse> call, final Response<LoginData.LoginResponse> response) {
-                try {
+
                     if (response.body() != null) {
                         // If appropriate response is noticed then received token is saved to the secure preferences
                         showFailedServerConnectionSnackBar(false);
@@ -156,7 +161,11 @@ public class LoginActivity extends AppCompatActivity {
                         // If appropriate response isn't noticed then number of tries for login is checked
                         // and user is notified about the situation
                         if (triesToLogin == numberOfTriesForConnectionCheck) {
-                            triesToLogin = 0;
+                            if(!askedUserForSaveMode) {
+                                showWithoutSaveModeAlert(null, -1, ProcessParts.LOGIN);
+                            }else{
+                                login();
+                            }
                             showFailedServerConnectionSnackBar(true);
                         }
 
@@ -164,12 +173,7 @@ public class LoginActivity extends AppCompatActivity {
                         login();
                     }
 
-                } catch (Exception e) {
 
-                    // If the app fails to connect to internet then the user is notified
-                    failedToConnect();
-                    e.printStackTrace();
-                }
             }
 
             @Override
@@ -212,7 +216,7 @@ public class LoginActivity extends AppCompatActivity {
 
                         editor.putInt("id", storageDataResponse.getId()).apply();
 
-                        moveToMainActivity(storageDataResponse.getData());
+                        moveToMainActivity(storageDataResponse.getData(), true);
 
                     } else {
 
@@ -221,7 +225,11 @@ public class LoginActivity extends AppCompatActivity {
                         Log.d(TAG, "onResponse: Request to get storage id failed " + response2);
 
                         if (triesToGetStorageId == numberOfTriesForConnectionCheck) {
-                            triesToGetStorageId = 0;
+                            if(!askedUserForSaveMode) {
+                                showWithoutSaveModeAlert(token, -1, ProcessParts.GET_STORAGE_ID);
+                            }else{
+                                getStorageId(token);
+                            }
                             showFailedServerConnectionSnackBar(true);
                         }
 
@@ -265,13 +273,18 @@ public class LoginActivity extends AppCompatActivity {
                         Log.d(TAG, "onResponse: color " + response.body().getData());
                         StorageData.StorageDataResponse storageDataResponse = response.body();
 
-                        moveToMainActivity(storageDataResponse.getData());
+                        moveToMainActivity(storageDataResponse.getData(), true);
 
                     } else {
 
                         // If appropriate response is not found then the user is notified accordingly.
                         if (triesToLoadStorageData == numberOfTriesForConnectionCheck) {
-                            triesToLoadStorageData = 0;
+
+                            if(!askedUserForSaveMode) {
+                                showWithoutSaveModeAlert(token, id, ProcessParts.LOAD_DATA);
+                            }else{
+                                loadData(token, id);
+                            }
                             showFailedServerConnectionSnackBar(true);
                         }
                         // Another attempt is made to load said data
@@ -340,14 +353,17 @@ public class LoginActivity extends AppCompatActivity {
      * Utility function to load MainActivity
      * @param lastSavedColor Color loaded from storage
      */
-    private void moveToMainActivity(String lastSavedColor) {
+    private void moveToMainActivity(String lastSavedColor, Boolean saveMode) {
 
         // User is notified
         setProgressUpdateText(colorPaletteMessage);
 
         // MainActivity is called
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        intent.putExtra("lastSavedColor", lastSavedColor);
+        if(lastSavedColor != null) {
+            intent.putExtra("lastSavedColor", lastSavedColor);
+        }
+        intent.putExtra("saveMode", saveMode);
         startActivity(intent);
     }
 
@@ -369,5 +385,66 @@ public class LoginActivity extends AppCompatActivity {
         }else{
             serverConnectionFailedSnackBar.dismiss();
         }
+    }
+
+    /**
+     * Parts of the entire logging process
+     */
+    private enum ProcessParts {
+        LOGIN, GET_STORAGE_ID, LOAD_DATA
+    }
+
+    /**
+     * Utility method for creating alert to ask user if they want to continue without saving their data
+     * @param token Token passed . Can be null
+     * @param id    id passed . Cannot be null but can be -1 as equivalent of null
+     * @param part  Part from where this dialog is called
+     */
+    private void showWithoutSaveModeAlert(final String token, final int id, final ProcessParts part){
+
+        askedUserForSaveMode = true;
+
+        // Builds the necessary dialog if needed
+        if(alertDialog == null) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(LoginActivity.this);
+            builder.setTitle("Failed to connect to server. Want to continue without saving your data ?");
+            builder.setCancelable(true);
+            builder.setPositiveButton("Yes, Please", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+
+                    moveToMainActivity(null, false);
+                }
+            });
+
+            builder.setNegativeButton("Nope. I'll wait", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                    switch (part) {
+
+                        case LOGIN:
+                            triesToLogin = 0;
+                            login();
+                            break;
+
+                        case GET_STORAGE_ID:
+                            triesToGetStorageId = 0;
+                            getStorageId(token);
+                            break;
+                        case LOAD_DATA:
+                            triesToLogin = 0;
+                            loadData(token, id);
+                            break;
+                    }
+                }
+            });
+
+            alertDialog = builder.create();
+        }
+
+        // Alert Dialog is shown
+        alertDialog.show();
+
     }
 }

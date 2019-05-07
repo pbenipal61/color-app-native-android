@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private SecurePreferences securePreferences = null;         // Reference to secure preferences used to store data
     private Snackbar snackbar = null;                           // Reference to a SnackBar
     private ProgressBar progressBar;                            // Reference to the progress bar
+    private Boolean saveMode;                                   // Check if running in save mode
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +102,11 @@ public class MainActivity extends AppCompatActivity {
         String colorString = getIntent().getStringExtra("lastSavedColor");
         if (colorString != null) {
             rlMainLayout.setBackgroundColor(Color.parseColor(colorString));
+        }
+
+        saveMode = getIntent().getBooleanExtra("saveMode", false);
+        if(!saveMode){
+            SnackBarHelper.generate(rlMainLayout, "Please mind that any changes won't be saved.", Snackbar.LENGTH_LONG).show();
         }
         progressBar = findViewById(R.id.progressBar);
     }
@@ -174,7 +180,18 @@ public class MainActivity extends AppCompatActivity {
 
         if (id == R.id.ic_delete) {
             Log.d(TAG, "onOptionsItemSelected: delete");
-            showDeleteStorageAlert();
+
+
+            if(!saveMode){
+
+                // User notified about reset not possible
+                SnackBarHelper.generate(rlMainLayout, "Can't reset", Snackbar.LENGTH_SHORT).show();
+            }else{
+
+                // User shown the alert dialog to continue reset
+                showDeleteStorageAlert();
+            }
+
         }
 
         return true;
@@ -284,7 +301,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Main background color is set since rlMainLayout is the main layout
         rlMainLayout.setBackgroundColor(color);
-        saveData(colorString);
+        if(getIntent().getBooleanExtra("saveMode",true)) {
+            saveData(colorString);
+        }
 
     }
 
