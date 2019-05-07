@@ -2,21 +2,28 @@ package com.postmaninteractive.colorapp.Utils;
 
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Point;
 import android.util.DisplayMetrics;
-import android.view.Display;
 
 public class ResizeHelper {
 
-    public static int[] getScreenDimensions(Context context){
+    private static int[] _vals = null;      // Screen Dimensions
 
-        int[] vals = new int[2];
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        ((Activity)context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        vals[1] = displayMetrics.heightPixels;
-        vals[0] = displayMetrics.widthPixels;
+    /**
+     * Get screen size dimensions
+     *
+     * @param context Context from where the function is called
+     * @return Array of screen dimensions where value at 0 is height and at 1 is width
+     */
+    public static int[] getScreenDimensions(Context context) {
 
+        if (_vals == null) {
+            _vals = new int[2];
+            DisplayMetrics displayMetrics = new DisplayMetrics();
+            ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+            _vals[1] = displayMetrics.heightPixels;
+            _vals[0] = displayMetrics.widthPixels;
+        }
 
-        return vals;
+        return _vals;
     }
 }

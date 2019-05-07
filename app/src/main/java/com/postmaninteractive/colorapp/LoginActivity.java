@@ -19,7 +19,7 @@ import com.postmaninteractive.colorapp.Models.StorageData;
 import com.postmaninteractive.colorapp.Utils.Api;
 import com.postmaninteractive.colorapp.Utils.ResizeHelper;
 import com.postmaninteractive.colorapp.Utils.RetrofitHelper;
-import com.postmaninteractive.colorapp.Utils.SnackbarHelper;
+import com.postmaninteractive.colorapp.Utils.SnackBarHelper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +47,10 @@ public class LoginActivity extends AppCompatActivity {
     private int triesToLoadStorageData = 0;                 // Number of times app has tried to load storage data
     private int triesToLogin = 0;                           // Number of times the app tried to login
     private int triesToGetStorageId = 0;                    // Number of times the app tried to get a storage id for the user
+    private String loginMessage = "Login to continue";      // Message to notify user about logging in
+     private String colorPaletteMessage ="Loading color palette!";   // Message when MainActivity is being loaded
+    private String loadingDataMessage = "Loading data...";  // Message on trying to load data from the server
+    private String loadingStorageIdMessage="Getting storage id..."; //Message on trying to load a storage id
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,13 +95,15 @@ public class LoginActivity extends AppCompatActivity {
 
 
             loginButton.setVisibility(View.VISIBLE);
-            SnackbarHelper.generate(rlMainLayout, "Login to continue").show();
+            final Snackbar loginSnackBar = SnackBarHelper.generate(rlMainLayout, loginMessage, Snackbar.LENGTH_INDEFINITE);
+            loginSnackBar.show();
             loginButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    loginSnackBar.dismiss();
                     loginButton.setVisibility(View.GONE);
                     progressBar.setVisibility(View.VISIBLE);
-                    setProgressUpdateText("Logging in...");
+
 
                     login();
                 }
@@ -131,7 +137,7 @@ public class LoginActivity extends AppCompatActivity {
         triesToLogin++;
         Log.d(TAG, "login: Loggin in");
         LoginData loginData = new LoginData("fstest08", "mqG36jUr");
-
+        setProgressUpdateText("Logging in...");
 
         Call<LoginData.LoginResponse> loginCall = api.login(loginData);
         loginCall.enqueue(new Callback<LoginData.LoginResponse>() {
@@ -142,12 +148,13 @@ public class LoginActivity extends AppCompatActivity {
 
                         showFailedServerConnectionSnackbar(false);
                         LoginData.LoginResponse loginResponse = response.body();
+                        Log.d(TAG, "onResponse: api token is " +  loginResponse.getToken());
                         editor.putString("apiToken", loginResponse.getToken()).apply();
                         getStorageId(loginResponse.getToken());
 
                     } else {
 
-                        setProgressUpdateText("Failed to login. Trying again...");
+
                         if (triesToLogin == numberOfTriesForConnectionCheck) {
                             triesToLogin = 0;
 
@@ -181,40 +188,39 @@ public class LoginActivity extends AppCompatActivity {
 
         triesToGetStorageId++;
 
-        setProgressUpdateText("Getting storage id...");
+        setProgressUpdateText(loadingStorageIdMessage);
 
-        Map<String, String> storageIdCallBody = new HashMap<String, String>();
+        Map<String, String> storageIdCallBody = new HashMap<>();
         storageIdCallBody.put("data", "#ffffff");
         Call<StorageData.StorageDataResponse> getStorageIdCall = api.getStorageId(token, storageIdCallBody);
         getStorageIdCall.enqueue(new Callback<StorageData.StorageDataResponse>() {
             @Override
             public void onResponse(Call<StorageData.StorageDataResponse> call2, Response<StorageData.StorageDataResponse> response2) {
 
-                if (response2.code() == 200) {
+
                     if (response2.body() != null) {
                         showFailedServerConnectionSnackbar(false);
                         StorageData.StorageDataResponse storageDataResponse = response2.body();
 
                         editor.putInt("id", storageDataResponse.getId()).apply();
-                        setProgressUpdateText("Loading color palette!");
+                        setProgressUpdateText(colorPaletteMessage);
                         moveToMainActivity(storageDataResponse.getData());
 
                     } else {
 
-                        setProgressUpdateText("Failed to get storage id.Trying again...");
-                        getStorageId(token);
-                    }
-                } else {
 
-                    Log.d(TAG, "onResponse: Request to get storage id failed " + response2);
+                        Log.d(TAG, "onResponse: Request to get storage id failed " + response2);
 //                    setProgressUpdateText("Something went wrong while getting storage id.\nTrying again...");
-                    getStorageId(token);
+                        getStorageId(token);
 
-                    if (triesToGetStorageId == numberOfTriesForConnectionCheck) {
-                        triesToGetStorageId = 0;
-                        showFailedServerConnectionSnackbar(true);
+                        if (triesToGetStorageId == numberOfTriesForConnectionCheck) {
+                            triesToGetStorageId = 0;
+                            showFailedServerConnectionSnackbar(true);
+                        }
+
+
                     }
-                }
+
             }
 
             @Override
@@ -236,31 +242,38 @@ public class LoginActivity extends AppCompatActivity {
     private void loadData(final String token, final int id) {
 
         triesToLoadStorageData++;
-        setProgressUpdateText("Loading data...");
+        setProgressUpdateText(loadingDataMessage);
         Log.d(TAG, "loadData: " + id + " " + token);
         Call<StorageData.StorageDataResponse> storageDataResponseCall = api.getData(token, id);
         storageDataResponseCall.enqueue(new Callback<StorageData.StorageDataResponse>() {
             @Override
             public void onResponse(Call<StorageData.StorageDataResponse> call, Response<StorageData.StorageDataResponse> response) {
-                if (response.body() != null) {
+                try {
+                    if (response.body() != null) {
 
-                    showFailedServerConnectionSnackbar(false);
-                    Log.d(TAG, "onResponse: color " + response.body().getData());
-                    StorageData.StorageDataResponse storageDataResponse = response.body();
-                    setProgressUpdateText("Loading color pallette!");
-                    moveToMainActivity(storageDataResponse.getData());
+                        showFailedServerConnectionSnackbar(false);
+                        Log.d(TAG, "onResponse: color " + response.body().getData());
+                        StorageData.StorageDataResponse storageDataResponse = response.body();
+                        setProgressUpdateText(colorPaletteMessage);
+                        moveToMainActivity(storageDataResponse.getData());
 
-                } else {
+                    } else {
 
-                    Log.d(TAG, "onResponse: Loading stored colours response was null");
+                        Log.d(TAG, "onResponse: Loading stored colours response was null");
 //                    setProgressUpdateText("Something went wrong while loading previous data. Trying again...");
 
-                    if(triesToLoadStorageData == numberOfTriesForConnectionCheck){
-                        triesToLoadStorageData = 0;
-                        showFailedServerConnectionSnackbar(true);
-                    }
-                    loadData(token, id);
+                        if (triesToLoadStorageData == numberOfTriesForConnectionCheck) {
+                            triesToLoadStorageData = 0;
+                            showFailedServerConnectionSnackbar(true);
+                        }
 
+                        loadData(token, id);
+
+                    }
+                }
+                catch(Exception e){
+                    failedToConnect();
+                    e.printStackTrace();
                 }
             }
 
@@ -338,7 +351,7 @@ public class LoginActivity extends AppCompatActivity {
 
         if (serverConnectionFailedSnackbar == null) {
             String message = "Server appears to be down!";
-            serverConnectionFailedSnackbar = SnackbarHelper.generate(rlMainLayout, message, Snackbar.LENGTH_INDEFINITE);
+            serverConnectionFailedSnackbar = SnackBarHelper.generate(rlMainLayout, message, Snackbar.LENGTH_INDEFINITE);
         }
 
         if(show){

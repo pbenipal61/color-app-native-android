@@ -8,22 +8,25 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.postmaninteractive.colorapp.MainActivity;
 import com.postmaninteractive.colorapp.Models.ColorItem;
 import com.postmaninteractive.colorapp.R;
-import com.postmaninteractive.colorapp.Utils.ResizeHelper;
 
 import java.util.List;
 
 public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAdapter.ColorItemViewHolder> {
 
-    private final Context context;
-    private final List<ColorItem> colorItems;
+    private final Context context;              // Reference to the context this adapter is initiated
+    private final List<ColorItem> colorItems;   // List of all color items to be presented in the recycler view
 
+
+    /**
+     * Creates adapter
+     * @param context   // Context from where this constructor is called
+     * @param colorItems    // ColorItems list to be used
+     */
     public ColorItemsViewAdapter(Context context, List<ColorItem> colorItems) {
         this.context = context;
         this.colorItems = colorItems;
@@ -63,6 +66,11 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
         private final CardView cvColor;
         private final TextView tvName;
 
+        /**
+         * Creates an object
+         *
+         * @param itemView View of what is to be contained
+         */
         private ColorItemViewHolder(@NonNull View itemView) {
             super(itemView);
 
@@ -72,6 +80,11 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
 
         }
 
+        /**
+         * Sets background color on the cardview
+         *
+         * @param colorString Color to be set as background
+         */
         private void setBackgroundColor(String colorString) {
 
 //            cvColor.setBackgroundColor(Color.parseColor(colorString));

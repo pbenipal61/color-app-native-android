@@ -26,7 +26,7 @@ import com.postmaninteractive.colorapp.Models.ColorItem;
 import com.postmaninteractive.colorapp.Models.StorageData;
 import com.postmaninteractive.colorapp.Utils.Api;
 import com.postmaninteractive.colorapp.Utils.RetrofitHelper;
-import com.postmaninteractive.colorapp.Utils.SnackbarHelper;
+import com.postmaninteractive.colorapp.Utils.SnackBarHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -92,8 +92,9 @@ public class MainActivity extends AppCompatActivity {
 
         rlMainLayout = findViewById(R.id.rlMainLayout);
         String colorString = getIntent().getStringExtra("lastSavedColor");
-        rlMainLayout.setBackgroundColor(Color.parseColor(colorString));
-
+        if (colorString != null) {
+            rlMainLayout.setBackgroundColor(Color.parseColor(colorString));
+        }
         progressBar = findViewById(R.id.progressBar);
 
 
@@ -102,13 +103,14 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Saves data to the server
+     *
      * @param colorString Color to be saved onto the server
      */
     private void saveData(final String colorString) {
 
         StorageData storageData = new StorageData(colorString);
 
-        if(securePreferences == null){
+        if (securePreferences == null) {
             SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
                     .build();
             securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
@@ -125,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onResponse(Call<StorageData.StorageDataResponse> call, Response<StorageData.StorageDataResponse> response) {
 
                     if (response.body() != null) {
-
+                        showSnackBar(false);
                         Log.d(TAG, "onResponse: save data response " + response.body());
 
                     } else {
@@ -139,8 +141,8 @@ public class MainActivity extends AppCompatActivity {
                 public void onFailure(Call<StorageData.StorageDataResponse> call, Throwable t) {
 
                     Log.d(TAG, "onFailure: failed to save data");
-                    showSnackbar(true);
-                     t.printStackTrace();
+                    showSnackBar(true);
+                    t.printStackTrace();
                 }
             });
         } else {
@@ -165,12 +167,9 @@ public class MainActivity extends AppCompatActivity {
 
         int id = item.getItemId();
 
-        switch (id) {
-
-            case R.id.ic_delete:
-                Log.d(TAG, "onOptionsItemSelected: delete");
-                showDeleteStorageAlert();
-                break;
+        if (id == R.id.ic_delete) {
+            Log.d(TAG, "onOptionsItemSelected: delete");
+            showDeleteStorageAlert();
         }
 
         return true;
@@ -179,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Shows alert for resetting the app
      */
-    private void showDeleteStorageAlert(){
+    private void showDeleteStorageAlert() {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("Are you sure you want to reset the app?");
@@ -206,8 +205,8 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Deletes the storage on the server and resets the application
      */
-    private void deleteStorage(){
-        if(securePreferences == null){
+    private void deleteStorage() {
+        if (securePreferences == null) {
             SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
                     .build();
             securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
@@ -216,18 +215,18 @@ public class MainActivity extends AppCompatActivity {
         String token = securePreferences.getString("apiToken", "default");
         int id = securePreferences.getInt("id", -1);
 
-        Log.d(TAG, "deleteStorage: " + token+ " " + id);
+        Log.d(TAG, "deleteStorage: " + token + " " + id);
 
         Call<String> call = api.deleteStorage(token, id);
         call.enqueue(new Callback<String>() {
             @Override
             public void onResponse(Call<String> call, Response<String> response) {
 
-                Log.d(TAG, "onResponse: delete response "+ response);
-                if(response.body() == null){
+                Log.d(TAG, "onResponse: delete response " + response);
+                if (response.body() == null) {
                     deleteStorage();
-                }else{
-
+                } else {
+                    showSnackBar(false);
                     editor.putString("apiToken", "default").apply();
                     editor.putInt("id", -1).apply();
                     Intent intent = new Intent(MainActivity.this, LoginActivity.class);
@@ -239,7 +238,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<String> call, Throwable t) {
 
-                showSnackbar(true);
+                showSnackBar(true);
             }
         });
 
@@ -247,8 +246,9 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Utility function to generate ColorItem object on demand
-     * @param colorString   Color to be stored in the object
-     * @param generalName   General name of the color
+     *
+     * @param colorString Color to be stored in the object
+     * @param generalName General name of the color
      * @return ColorItem object
      */
     private ColorItem generateColorItem(String colorString, String generalName) {
@@ -260,8 +260,9 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Utility function to change background color.
      * It also calls the function to store the current color string on the server
-     * @param color
-     * @param colorString
+     *
+     * @param color       Color reference
+     * @param colorString Color string
      */
     public void setAsBackgroundColor(int color, String colorString) {
 
@@ -272,17 +273,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Utility function to show the snackbar
-     * @param toShow If to show the snackbar or dismiss it
+     * Utility function to show the SnackBar
+     *
+     * @param toShow If to show the SnackBar or dismiss it
      */
-    private void showSnackbar(Boolean toShow){
+    private void showSnackBar(Boolean toShow) {
 
-        if(snackbar == null){
+        if (snackbar == null) {
             String message = "Failed to connect to the server. Please check internet connection.";
-            snackbar = SnackbarHelper.generate(rlMainLayout, message, Snackbar.LENGTH_INDEFINITE);
+            snackbar = SnackBarHelper.generate(rlMainLayout, message, Snackbar.LENGTH_INDEFINITE);
         }
 
-        snackbar.show();
+        if (toShow) {
+            snackbar.show();
+        } else {
+            snackbar.dismiss();
+        }
 
 
     }

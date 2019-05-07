@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Color App</string>
-    <string name="api_base_url">https://cld8zbgxoc.execute-api.eu-central-1.amazonaws.com/api/v1/</string>
     <string name="logging_in">logging in...</string>
     <string name="login_to_continue"></string>
     <string name="login">tap to login</string>
