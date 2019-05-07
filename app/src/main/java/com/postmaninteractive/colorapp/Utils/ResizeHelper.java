@@ -6,7 +6,7 @@ import android.util.DisplayMetrics;
 
 public class ResizeHelper {
 
-    private static int[] _vals = null;      // Screen Dimensions
+    private static int[] dimensions = null;      // Screen Dimensions
 
     /**
      * Get screen size dimensions
@@ -16,14 +16,14 @@ public class ResizeHelper {
      */
     public static int[] getScreenDimensions(Context context) {
 
-        if (_vals == null) {
-            _vals = new int[2];
+        if (dimensions == null) {
+            dimensions = new int[2];
             DisplayMetrics displayMetrics = new DisplayMetrics();
             ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-            _vals[1] = displayMetrics.heightPixels;
-            _vals[0] = displayMetrics.widthPixels;
+            dimensions[1] = displayMetrics.heightPixels;
+            dimensions[0] = displayMetrics.widthPixels;
         }
 
-        return _vals;
+        return dimensions;
     }
 }

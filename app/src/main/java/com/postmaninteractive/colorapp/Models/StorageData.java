@@ -24,8 +24,8 @@ public class StorageData {
      * StorageDataResponse class
      */
     public class StorageDataResponse{
-        private int id;         // Response will have an id
-        private String data;    // Response will have data
+        private final int id;         // Response will have an id
+        private final String data;    // Response will have data
 
         public StorageDataResponse(int id, String data) {
             this.id = id;

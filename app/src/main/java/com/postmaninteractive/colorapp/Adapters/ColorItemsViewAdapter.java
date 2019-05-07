@@ -81,7 +81,7 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
         }
 
         /**
-         * Sets background color on the cardview
+         * Sets background color on the CardView
          *
          * @param colorString Color to be set as background
          */

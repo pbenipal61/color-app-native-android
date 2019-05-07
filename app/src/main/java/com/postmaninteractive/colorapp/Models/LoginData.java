@@ -19,7 +19,7 @@ public class LoginData {
      * Login Response class
      */
      public class LoginResponse{
-        private String token;
+        private final String token;
 
         /**
          * Created a LoginResponse Object

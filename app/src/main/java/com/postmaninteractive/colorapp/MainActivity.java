@@ -36,6 +36,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
+import retrofit2.internal.EverythingIsNonNull;
 
 import static android.provider.Telephony.Carriers.PASSWORD;
 import static android.provider.Telephony.Mms.Part.FILENAME;
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private RelativeLayout rlMainLayout;                        // Reference to main layout
     private Api api;                                            // Reference to api interface
     private SecurePreferences securePreferences = null;         // Reference to secure preferences used to store data
-    private Snackbar snackbar = null;                           // Reference to a snackbar
+    private Snackbar snackbar = null;                           // Reference to a SnackBar
     private ProgressBar progressBar;                            // Reference to the progress bar
 
     @Override
@@ -56,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (this.getActionBar() != null) {
 
+            // ActionBar is customised
             ActionBar actionBar = this.getSupportActionBar();
             Objects.requireNonNull(actionBar).setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
             actionBar.setDisplayShowCustomEnabled(true);
@@ -66,9 +68,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        Retrofit retrofit = RetrofitHelper.generate(this);
+        Retrofit retrofit = RetrofitHelper.generate();
         api = retrofit.create(Api.class);
 
+        // ColorItems list is created
         List<ColorItem> colorItems = new ArrayList<>();
         colorItems.add(generateColorItem("#E91E63", "Pink"));
         colorItems.add(generateColorItem("#FFEB3B", "Yellow"));
@@ -78,12 +81,13 @@ public class MainActivity extends AppCompatActivity {
         colorItems.add(generateColorItem("#78909c", "Blue Grey"));
         colorItems.add(generateColorItem("#ff5722", "Deep Orange"));
         colorItems.add(generateColorItem("#ffc107", "Amber"));
-        colorItems.add(generateColorItem("#DEB887", "Burlywood"));
+        colorItems.add(generateColorItem("#DEB887", "BurlyWood"));
         colorItems.add(generateColorItem("#FF7F50", "Coral"));
         colorItems.add(generateColorItem("#B8860B", "Dark Golden Rod"));
         colorItems.add(generateColorItem("#F0FFF0", "Honey Dew"));
 
 
+        // Recycler view is populated using the adapter in a grid view
         RecyclerView rvColorItems = findViewById(R.id.rvColorItems);
         ColorItemsViewAdapter adapter = new ColorItemsViewAdapter(this, colorItems);
         int numberOfColumns = 3;
@@ -91,13 +95,14 @@ public class MainActivity extends AppCompatActivity {
         rvColorItems.setAdapter(adapter);
 
         rlMainLayout = findViewById(R.id.rlMainLayout);
+
+        // LastSavedColor, which was passed from LoginActivity, is checked and if its not null then
+        // it is parsed and set as background color of the main layout
         String colorString = getIntent().getStringExtra("lastSavedColor");
         if (colorString != null) {
             rlMainLayout.setBackgroundColor(Color.parseColor(colorString));
         }
         progressBar = findViewById(R.id.progressBar);
-
-
     }
 
 
@@ -108,16 +113,21 @@ public class MainActivity extends AppCompatActivity {
      */
     private void saveData(final String colorString) {
 
+        // StorageData object is created to store newest color to the storage on the server
         StorageData storageData = new StorageData(colorString);
 
+        // SecurePreferences are prepared
         if (securePreferences == null) {
             SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
                     .build();
             securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
         }
 
+        // Token and id are fetched from the server
         String token = securePreferences.getString("apiToken", "default");
         int id = securePreferences.getInt("id", -1);
+
+        // If token and id exists then process proceeds
         if (!token.equals("default") && id != -1) {
             Log.d(TAG, "saveData: " + token + " " + id);
 
@@ -129,14 +139,11 @@ public class MainActivity extends AppCompatActivity {
                     if (response.body() != null) {
                         showSnackBar(false);
                         Log.d(TAG, "onResponse: save data response " + response.body());
-
                     } else {
-
                         Log.d(TAG, "onResponse: save data response was null");
                         saveData(colorString);
                     }
                 }
-
                 @Override
                 public void onFailure(Call<StorageData.StorageDataResponse> call, Throwable t) {
 
@@ -147,18 +154,16 @@ public class MainActivity extends AppCompatActivity {
             });
         } else {
 
-
+            // If token and id doesn't exist then user is notified
+            SnackBarHelper.generate(rlMainLayout, "Something went wrong . Failed to communicate with the server.").show();
             Log.d(TAG, "saveData: Something is missing" + token + " " + id);
-
         }
-
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
 
         getMenuInflater().inflate(R.menu.layout_main_activity_action_bar, menu);
-
         return true;
     }
 
@@ -180,6 +185,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void showDeleteStorageAlert() {
 
+        // Reset alert dialog is prepared and shown
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("Are you sure you want to reset the app?");
         builder.setCancelable(true);
@@ -206,29 +212,38 @@ public class MainActivity extends AppCompatActivity {
      * Deletes the storage on the server and resets the application
      */
     private void deleteStorage() {
+
+        // SecurePreferences are prepared
         if (securePreferences == null) {
             SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
                     .build();
             securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
         }
+
+        // Editor for secure preferences is prepared
         final SecurePreferences.Editor editor = securePreferences.edit();
         String token = securePreferences.getString("apiToken", "default");
         int id = securePreferences.getInt("id", -1);
 
-        Log.d(TAG, "deleteStorage: " + token + " " + id);
-
+        // Api call
         Call<String> call = api.deleteStorage(token, id);
         call.enqueue(new Callback<String>() {
             @Override
             public void onResponse(Call<String> call, Response<String> response) {
 
-                Log.d(TAG, "onResponse: delete response " + response);
+
                 if (response.body() == null) {
+
+                    // If failed to delete storage then another attempt is made
                     deleteStorage();
                 } else {
+
+                    // Secure preferences are updated with not valid values for token and id
                     showSnackBar(false);
                     editor.putString("apiToken", "default").apply();
                     editor.putInt("id", -1).apply();
+
+                    // User is taken to LoginActivity to complete the reset process
                     Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                     startActivity(intent);
                 }
@@ -238,6 +253,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<String> call, Throwable t) {
 
+                // If something goes wrong or app fails to connect to internet the user is notified
                 showSnackBar(true);
             }
         });
@@ -266,7 +282,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void setAsBackgroundColor(int color, String colorString) {
 
-
+        // Main background color is set since rlMainLayout is the main layout
         rlMainLayout.setBackgroundColor(color);
         saveData(colorString);
 
@@ -278,6 +294,7 @@ public class MainActivity extends AppCompatActivity {
      * @param toShow If to show the SnackBar or dismiss it
      */
     private void showSnackBar(Boolean toShow) {
+
 
         if (snackbar == null) {
             String message = "Failed to connect to the server. Please check internet connection.";
