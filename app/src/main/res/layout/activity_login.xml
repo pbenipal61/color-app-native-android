@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".LoginActivity">
+    tools:context=".LoginActivity"
+    android:id="@+id/rlMainLayout">
 
     <LinearLayout
         android:layout_centerInParent="true"
@@ -14,26 +15,48 @@
 
         <ProgressBar
             android:layout_gravity="center"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:id="@+id/progressBar"
+            android:visibility="visible"
             />
 
         <Button
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:background="@drawable/login_event_shape"
+            android:shadowRadius="5"
+            android:visibility="gone"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/login_activity_button_height"
             android:id="@+id/retryButton"
-            android:text="RETRY"
-            android:visibility="gone"/>
+            android:text="@string/retry"
+            android:textSize="@dimen/login_activity_button_text_size"
+            android:textColor="@color/white"
+            android:textAllCaps="false"/>
+        <Button
+
+            android:text="@string/login"
+            android:textColor="@color/white"
+            android:textSize="@dimen/login_activity_button_text_size"
+            android:id="@+id/loginButton"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/login_activity_button_height"
+            android:background="@drawable/login_event_shape"
+            android:shadowRadius="5"
+            android:visibility="gone"
+            android:textAllCaps="false"
+            />
+
 
         <TextView
-            android:textSize="28sp"
-            android:textStyle="bold"
+
+            android:textSize="22sp"
             android:layout_gravity="center"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/tvUpdate"
-            android:text="@string/logging_in"/>
+            android:text="@string/login_to_continue"/>
     </LinearLayout>
 
 </RelativeLayout>

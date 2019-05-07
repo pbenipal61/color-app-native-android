@@ -33,5 +33,5 @@ public interface Api {
     Call<StorageData.StorageDataResponse> getData(@Header ("Authorization") String token, @Path("id") int id);
 
     @DELETE("storage/{id}")
-    Call<String> deleteStorage(@Path("id") int id);
+    Call<String> deleteStorage(@Header ("Authorization") String token, @Path("id") int id);
 }

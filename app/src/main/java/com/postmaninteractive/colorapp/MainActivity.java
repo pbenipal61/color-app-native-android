@@ -1,15 +1,22 @@
 package com.postmaninteractive.colorapp;
 
 
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 
 import com.github.hussainderry.securepreferences.SecurePreferences;
@@ -19,9 +26,11 @@ import com.postmaninteractive.colorapp.Models.ColorItem;
 import com.postmaninteractive.colorapp.Models.StorageData;
 import com.postmaninteractive.colorapp.Utils.Api;
 import com.postmaninteractive.colorapp.Utils.RetrofitHelper;
+import com.postmaninteractive.colorapp.Utils.SnackbarHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -33,9 +42,12 @@ import static android.provider.Telephony.Mms.Part.FILENAME;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "MainActivity";
-    private RelativeLayout rlMainLayout;
-    private Api api;
+    private static final String TAG = "MainActivity";           // Tag for log events
+    private RelativeLayout rlMainLayout;                        // Reference to main layout
+    private Api api;                                            // Reference to api interface
+    private SecurePreferences securePreferences = null;         // Reference to secure preferences used to store data
+    private Snackbar snackbar = null;                           // Reference to a snackbar
+    private ProgressBar progressBar;                            // Reference to the progress bar
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,10 +55,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         if (this.getActionBar() != null) {
-            this.getSupportActionBar().setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
-            getSupportActionBar().setDisplayShowCustomEnabled(true);
-            getSupportActionBar().setCustomView(R.layout.layout_task_bar);
-            getSupportActionBar().setElevation(1);
+
+            ActionBar actionBar = this.getSupportActionBar();
+            Objects.requireNonNull(actionBar).setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
+            actionBar.setDisplayShowCustomEnabled(true);
+            actionBar.setCustomView(R.layout.layout_task_bar);
+            actionBar.setElevation(1);
+            ColorDrawable colorDrawable = new ColorDrawable(Color.parseColor("#93E9FA"));
+            actionBar.setBackgroundDrawable(colorDrawable);
         }
 
 
@@ -78,31 +94,26 @@ public class MainActivity extends AppCompatActivity {
         String colorString = getIntent().getStringExtra("lastSavedColor");
         rlMainLayout.setBackgroundColor(Color.parseColor(colorString));
 
+        progressBar = findViewById(R.id.progressBar);
+
 
     }
 
-    private ColorItem generateColorItem(String colorString, String generalName) {
 
-        return new ColorItem(colorString, generalName);
-    }
-
-
-    public void setAsBackgroundColor(int color, String colorString) {
-
-
-        rlMainLayout.setBackgroundColor(color);
-        saveData(colorString);
-
-    }
-
-    private void saveData(String colorString) {
+    /**
+     * Saves data to the server
+     * @param colorString Color to be saved onto the server
+     */
+    private void saveData(final String colorString) {
 
         StorageData storageData = new StorageData(colorString);
-        SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
-                .build();
 
+        if(securePreferences == null){
+            SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
+                    .build();
+            securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
+        }
 
-        SecurePreferences securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
         String token = securePreferences.getString("apiToken", "default");
         int id = securePreferences.getInt("id", -1);
         if (!token.equals("default") && id != -1) {
@@ -120,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
                     } else {
 
                         Log.d(TAG, "onResponse: save data response was null");
+                        saveData(colorString);
                     }
                 }
 
@@ -127,7 +139,8 @@ public class MainActivity extends AppCompatActivity {
                 public void onFailure(Call<StorageData.StorageDataResponse> call, Throwable t) {
 
                     Log.d(TAG, "onFailure: failed to save data");
-                    t.printStackTrace();
+                    showSnackbar(true);
+                     t.printStackTrace();
                 }
             });
         } else {
@@ -156,11 +169,122 @@ public class MainActivity extends AppCompatActivity {
 
             case R.id.ic_delete:
                 Log.d(TAG, "onOptionsItemSelected: delete");
-
+                showDeleteStorageAlert();
                 break;
         }
 
         return true;
+    }
+
+    /**
+     * Shows alert for resetting the app
+     */
+    private void showDeleteStorageAlert(){
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Are you sure you want to reset the app?");
+        builder.setCancelable(true);
+        builder.setPositiveButton("Yep", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                progressBar.setVisibility(View.VISIBLE);
+                deleteStorage();
+            }
+        });
+
+        builder.setNegativeButton("Woops! Didn't mean to do that!", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+
+    /**
+     * Deletes the storage on the server and resets the application
+     */
+    private void deleteStorage(){
+        if(securePreferences == null){
+            SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
+                    .build();
+            securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
+        }
+        final SecurePreferences.Editor editor = securePreferences.edit();
+        String token = securePreferences.getString("apiToken", "default");
+        int id = securePreferences.getInt("id", -1);
+
+        Log.d(TAG, "deleteStorage: " + token+ " " + id);
+
+        Call<String> call = api.deleteStorage(token, id);
+        call.enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+
+                Log.d(TAG, "onResponse: delete response "+ response);
+                if(response.body() == null){
+                    deleteStorage();
+                }else{
+
+                    editor.putString("apiToken", "default").apply();
+                    editor.putInt("id", -1).apply();
+                    Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                    startActivity(intent);
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+
+                showSnackbar(true);
+            }
+        });
+
+    }
+
+    /**
+     * Utility function to generate ColorItem object on demand
+     * @param colorString   Color to be stored in the object
+     * @param generalName   General name of the color
+     * @return ColorItem object
+     */
+    private ColorItem generateColorItem(String colorString, String generalName) {
+
+        return new ColorItem(colorString, generalName);
+    }
+
+
+    /**
+     * Utility function to change background color.
+     * It also calls the function to store the current color string on the server
+     * @param color
+     * @param colorString
+     */
+    public void setAsBackgroundColor(int color, String colorString) {
+
+
+        rlMainLayout.setBackgroundColor(color);
+        saveData(colorString);
+
+    }
+
+    /**
+     * Utility function to show the snackbar
+     * @param toShow If to show the snackbar or dismiss it
+     */
+    private void showSnackbar(Boolean toShow){
+
+        if(snackbar == null){
+            String message = "Failed to connect to the server. Please check internet connection.";
+            snackbar = SnackbarHelper.generate(rlMainLayout, message, Snackbar.LENGTH_INDEFINITE);
+        }
+
+        snackbar.show();
+
+
     }
 
 }

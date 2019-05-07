@@ -8,11 +8,14 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.postmaninteractive.colorapp.MainActivity;
 import com.postmaninteractive.colorapp.Models.ColorItem;
 import com.postmaninteractive.colorapp.R;
+import com.postmaninteractive.colorapp.Utils.ResizeHelper;
 
 import java.util.List;
 
@@ -65,11 +68,15 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
 
             cvColor = itemView.findViewById(R.id.cvColor);
             tvName = itemView.findViewById(R.id.tvName);
+
+
         }
 
         private void setBackgroundColor(String colorString) {
 
-            cvColor.setBackgroundColor(Color.parseColor(colorString));
+//            cvColor.setBackgroundColor(Color.parseColor(colorString));
+
+            cvColor.setCardBackgroundColor(Color.parseColor(colorString));
         }
 
         private void setColorName(String name) {
