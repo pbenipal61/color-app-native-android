@@ -60,10 +60,10 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
         return colorItems.size();
     }
 
-    static class ColorItemViewHolder extends RecyclerView.ViewHolder {
+    public static class ColorItemViewHolder extends RecyclerView.ViewHolder {
 
-        private final CardView cvColor;
-        private final TextView tvName;
+        public final CardView cvColor;
+        public final TextView tvName;
 
         /**
          * Creates an object

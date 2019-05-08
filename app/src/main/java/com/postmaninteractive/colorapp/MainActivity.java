@@ -70,13 +70,13 @@ public class MainActivity extends AppCompatActivity {
             actionBar.setDisplayShowCustomEnabled(true);
             actionBar.setCustomView(R.layout.layout_task_bar);
             actionBar.setElevation(1);
-            ColorDrawable colorDrawable = new ColorDrawable(Color.parseColor("#93E9FA"));
-            actionBar.setBackgroundDrawable(colorDrawable);
         }
-
 
         Retrofit retrofit = RetrofitHelper.generate();
         api = retrofit.create(Api.class);
+
+        rlMainLayout = findViewById(R.id.rlMainLayout);
+        progressBar = findViewById(R.id.progressBar);
 
         // ColorItems list is created
         List<ColorItem> colorItems = new ArrayList<>();
@@ -101,22 +101,18 @@ public class MainActivity extends AppCompatActivity {
         rvColorItems.setLayoutManager(new GridLayoutManager(this, numberOfColumns));
         rvColorItems.setAdapter(adapter);
 
-        rlMainLayout = findViewById(R.id.rlMainLayout);
-
-        // LastSavedColor, which was passed from LoginActivity, is checked and if its not null then
+        // Last saved color, which was passed from LoginActivity, is checked and if its not null then
         // it is parsed and set as background color of the main layout
         String colorString = getIntent().getStringExtra("lastSavedColor");
         if (colorString != null) {
             rlMainLayout.setBackgroundColor(Color.parseColor(colorString));
         }
 
+        // Mode is checked and user is notified if needed
         saveMode = getIntent().getBooleanExtra(KEY_SAVE_MODE, false);
         if(!saveMode){
-            SnackBarHelper.generate(rlMainLayout, "Please mind that any changes won't be saved.", Snackbar.LENGTH_LONG).show();
+            SnackBarHelper.generate(rlMainLayout, getString(R.string.main_activity_notif_without_savemode), Snackbar.LENGTH_LONG).show();
         }
-        progressBar = findViewById(R.id.progressBar);
-
-
     }
 
 
@@ -152,8 +148,7 @@ public class MainActivity extends AppCompatActivity {
 
         // SecurePreferences are prepared
         if (securePreferences == null) {
-            SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
-                    .build();
+            SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD).build();
             securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
         }
 
@@ -163,7 +158,6 @@ public class MainActivity extends AppCompatActivity {
 
         // If token and id exists then process proceeds
         if (!token.equals("default") && id != -1) {
-            Log.d(TAG, "saveData: " + token + " " + id);
 
             Call<StorageData.StorageDataResponse> dataResponseCall = api.storeData(token, id, storageData);
             dataResponseCall.enqueue(new Callback<StorageData.StorageDataResponse>() {
@@ -171,15 +165,12 @@ public class MainActivity extends AppCompatActivity {
                 public void onResponse(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Response<StorageData.StorageDataResponse> response) {
                     if (response.body() != null) {
                         showSnackBar(false);
-                        Log.d(TAG, "onResponse: save data response " + response.body());
                     } else {
-                        Log.d(TAG, "onResponse: save data response was null");
                         saveData(colorString);
                     }
                 }
                 @Override
                 public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Throwable t) {
-                    Log.d(TAG, "onFailure: failed to save data");
                     showSnackBar(true);
                     t.printStackTrace();
                 }
@@ -188,7 +179,6 @@ public class MainActivity extends AppCompatActivity {
 
             // If token and id doesn't exist then user is notified
             SnackBarHelper.generate(rlMainLayout, "Something went wrong . Failed to communicate with the server.").show();
-            Log.d(TAG, "saveData: Something is missing" + token + " " + id);
         }
     }
 
@@ -330,6 +320,8 @@ public class MainActivity extends AppCompatActivity {
             String message = "Failed to connect to the server. Please check internet connection.";
             snackbar = SnackBarHelper.generate(rlMainLayout, message, Snackbar.LENGTH_INDEFINITE);
         }
+
+        // SnackBar is shown or dismissed according to boolean toShow
         if (toShow) {
             snackbar.show();
         } else {

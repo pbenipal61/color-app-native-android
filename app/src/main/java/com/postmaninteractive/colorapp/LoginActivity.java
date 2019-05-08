@@ -7,7 +7,6 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -39,7 +38,7 @@ import static android.view.View.GONE;
 public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";      // Tag for logs
-    private final int numberOfTriesForConnectionCheck = 15;       // Number of times app should try to make a connection with the user before notifying the user
+    private final int numberOfTriesForConnectionCheck = 15; // Number of times app should try to make a connection with the user before notifying the user
     private SecurePreferences.Editor editor;                // Editor for secure preferences
     private Api api;                                        // Reference to api interface
     private TextView tvUpdate;                              // Update TextView reference
@@ -117,7 +116,6 @@ public class LoginActivity extends AppCompatActivity {
 
             // If both id and token exists then the stored data is loaded from the storage
             progressBar.setVisibility(View.VISIBLE);
-            Log.d(TAG, "onCreate: token found " + token);
             loginButton.setVisibility(View.GONE);
             loadData(token, id);
         }
@@ -141,12 +139,10 @@ public class LoginActivity extends AppCompatActivity {
         loginCall.enqueue(new Callback<LoginData.LoginResponse>() {
             @Override
             public void onResponse(@NonNull Call<LoginData.LoginResponse> call, @NonNull final Response<LoginData.LoginResponse> response) {
-                Log.d(TAG, "onResponse: "+ response.body());
                 if (response.body() != null) {
                     // If appropriate response is noticed then received token is saved to the secure preferences
                     showFailedServerConnectionSnackBar(false);
                     LoginData.LoginResponse loginResponse = response.body();
-                    Log.d(TAG, "onResponse: api token is " + loginResponse.getToken());
                     editor.putString("apiToken", loginResponse.getToken()).apply();
 
                     // This token is passed onto getStorageId function to get a new storage id
@@ -194,7 +190,6 @@ public class LoginActivity extends AppCompatActivity {
 
         // Number of tries of getting storage id is incremented
         triesToGetStorageId++;
-        Log.d(TAG, "getStorageId: Getting storage try " + triesToGetStorageId);
 
         // Default data to be stored into the soon to be created storage
         Map<String, String> storageIdCallBody = new HashMap<>();
@@ -218,7 +213,6 @@ public class LoginActivity extends AppCompatActivity {
 
                         // If appropriate response is not found then user is notified accordingly.
                         // Another attempt to get id is made
-                        Log.d(TAG, "onResponse: Request to get storage id failed " + response);
                         if (triesToGetStorageId == numberOfTriesForConnectionCheck) {
                             if (!askedUserForSaveMode) {
                                 showWithoutSaveModeAlert(token, -1, ProcessParts.GET_STORAGE_ID);
@@ -239,7 +233,6 @@ public class LoginActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call2,@NonNull Throwable t2) {
 
                 // If something goes wrong or the app fails to connect to internet then the user is notified
-                Log.d(TAG, "onFailure: Failed to get storage id");
                 failedToConnect();
                 t2.printStackTrace();
             }
@@ -269,7 +262,6 @@ public class LoginActivity extends AppCompatActivity {
 
                     // If appropriate response is found then the stored data is passed onto MainActivity as a color string
                     showFailedServerConnectionSnackBar(false);
-                    Log.d(TAG, "onResponse: color " + response.body().getData());
                     StorageData.StorageDataResponse storageDataResponse = response.body();
                     moveToMainActivity(storageDataResponse.getData(), true);
                 } else {
