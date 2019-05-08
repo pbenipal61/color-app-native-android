@@ -22,5 +22,7 @@ public class MainActivityTest {
         Espresso.onView(ViewMatchers.withId(R.id.rvColorItems))
                 .perform(RecyclerViewActions.actionOnItemAtPosition(position, ViewActions.click()));
 
+
+
     }
 }

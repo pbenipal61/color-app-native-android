@@ -6,21 +6,18 @@ import android.view.View;
 public class SnackBarHelper {
 
     /**
-     * Creates a SnackBar
+     * Creates a {@link Snackbar}
      *
      * @param view View
      * @param message Message on the SnackBar
      * @return SnackBar
      */
     public static Snackbar generate(View view, String message) {
-
         if (view != null && message != null) {
             return Snackbar.make(view, message, Snackbar.LENGTH_LONG);
         }else{
             throw new NullPointerException("view and message not provided for making a SnackBar");
-
         }
-
     }
 
     /**

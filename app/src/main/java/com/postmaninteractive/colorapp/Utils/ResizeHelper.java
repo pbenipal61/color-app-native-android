@@ -15,7 +15,6 @@ public class ResizeHelper {
      * @return Array of screen dimensions where value at 0 is height and at 1 is width
      */
     public static int[] getScreenDimensions(Context context) {
-
         if (dimensions == null) {
             dimensions = new int[2];
             DisplayMetrics displayMetrics = new DisplayMetrics();

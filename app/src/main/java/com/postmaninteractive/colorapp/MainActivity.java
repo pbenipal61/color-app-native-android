@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.PersistableBundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
@@ -36,7 +38,6 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
-import retrofit2.internal.EverythingIsNonNull;
 
 import static android.provider.Telephony.Carriers.PASSWORD;
 import static android.provider.Telephony.Mms.Part.FILENAME;
@@ -50,6 +51,11 @@ public class MainActivity extends AppCompatActivity {
     private Snackbar snackbar = null;                           // Reference to a SnackBar
     private ProgressBar progressBar;                            // Reference to the progress bar
     private Boolean saveMode;                                   // Check if running in save mode
+    private String KEY_COLOR = "colorKey";                      // Used as key for saving to instance
+    private String currentBGColorString;                        // Current background color string
+    private String KEY_SAVE_MODE = "saveMode";                  // Save mode key reference
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,13 +110,35 @@ public class MainActivity extends AppCompatActivity {
             rlMainLayout.setBackgroundColor(Color.parseColor(colorString));
         }
 
-        saveMode = getIntent().getBooleanExtra("saveMode", false);
+        saveMode = getIntent().getBooleanExtra(KEY_SAVE_MODE, false);
         if(!saveMode){
             SnackBarHelper.generate(rlMainLayout, "Please mind that any changes won't be saved.", Snackbar.LENGTH_LONG).show();
         }
         progressBar = findViewById(R.id.progressBar);
+
+
     }
 
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        // BG color string is stored to the activity state
+        outState.putString(KEY_COLOR, currentBGColorString);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        // If the state is being restored then previously saved color will be automatically applied
+        if(savedInstanceState != null){
+            String savedColor = savedInstanceState.getString(KEY_COLOR, "#ffffff");
+            rlMainLayout.setBackgroundColor(Color.parseColor(savedColor));
+            currentBGColorString = savedColor;
+        }
+    }
 
     /**
      * Saves data to the server
@@ -140,8 +168,7 @@ public class MainActivity extends AppCompatActivity {
             Call<StorageData.StorageDataResponse> dataResponseCall = api.storeData(token, id, storageData);
             dataResponseCall.enqueue(new Callback<StorageData.StorageDataResponse>() {
                 @Override
-                public void onResponse(Call<StorageData.StorageDataResponse> call, Response<StorageData.StorageDataResponse> response) {
-
+                public void onResponse(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Response<StorageData.StorageDataResponse> response) {
                     if (response.body() != null) {
                         showSnackBar(false);
                         Log.d(TAG, "onResponse: save data response " + response.body());
@@ -151,8 +178,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 @Override
-                public void onFailure(Call<StorageData.StorageDataResponse> call, Throwable t) {
-
+                public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Throwable t) {
                     Log.d(TAG, "onFailure: failed to save data");
                     showSnackBar(true);
                     t.printStackTrace();
@@ -168,20 +194,14 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-
         getMenuInflater().inflate(R.menu.layout_main_activity_action_bar, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-
         int id = item.getItemId();
-
         if (id == R.id.ic_delete) {
-            Log.d(TAG, "onOptionsItemSelected: delete");
-
-
             if(!saveMode){
 
                 // User notified about reset not possible
@@ -191,9 +211,7 @@ public class MainActivity extends AppCompatActivity {
                 // User shown the alert dialog to continue reset
                 showDeleteStorageAlert();
             }
-
         }
-
         return true;
     }
 
@@ -246,9 +264,7 @@ public class MainActivity extends AppCompatActivity {
         Call<String> call = api.deleteStorage(token, id);
         call.enqueue(new Callback<String>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-
-
+            public void onResponse(@NonNull Call<String> call, @NonNull Response<String> response) {
                 if (response.body() == null) {
 
                     // If failed to delete storage then another attempt is made
@@ -264,11 +280,10 @@ public class MainActivity extends AppCompatActivity {
                     Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                     startActivity(intent);
                 }
-
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable t) {
+            public void onFailure(@NonNull Call<String> call, @NonNull Throwable t) {
 
                 // If something goes wrong or app fails to connect to internet the user is notified
                 showSnackBar(true);
@@ -285,10 +300,8 @@ public class MainActivity extends AppCompatActivity {
      * @return ColorItem object
      */
     private ColorItem generateColorItem(String colorString, String generalName) {
-
         return new ColorItem(colorString, generalName);
     }
-
 
     /**
      * Utility function to change background color.
@@ -301,10 +314,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Main background color is set since rlMainLayout is the main layout
         rlMainLayout.setBackgroundColor(color);
-        if(getIntent().getBooleanExtra("saveMode",true)) {
+        currentBGColorString = colorString;
+        if(saveMode) {
             saveData(colorString);
         }
-
     }
 
     /**
@@ -313,20 +326,14 @@ public class MainActivity extends AppCompatActivity {
      * @param toShow If to show the SnackBar or dismiss it
      */
     private void showSnackBar(Boolean toShow) {
-
-
         if (snackbar == null) {
             String message = "Failed to connect to the server. Please check internet connection.";
             snackbar = SnackBarHelper.generate(rlMainLayout, message, Snackbar.LENGTH_INDEFINITE);
         }
-
         if (toShow) {
             snackbar.show();
         } else {
             snackbar.dismiss();
         }
-
-
     }
-
 }

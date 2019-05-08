@@ -35,7 +35,6 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
     @NonNull
     @Override
     public ColorItemViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-
         View view = LayoutInflater.from(context).inflate(R.layout.layout_color_item, viewGroup, false);
         return new ColorItemViewHolder(view);
     }
@@ -73,7 +72,6 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
          */
         private ColorItemViewHolder(@NonNull View itemView) {
             super(itemView);
-
             cvColor = itemView.findViewById(R.id.cvColor);
             tvName = itemView.findViewById(R.id.tvName);
 
@@ -86,12 +84,13 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
          * @param colorString Color to be set as background
          */
         private void setBackgroundColor(String colorString) {
-
-//            cvColor.setBackgroundColor(Color.parseColor(colorString));
-
             cvColor.setCardBackgroundColor(Color.parseColor(colorString));
         }
 
+        /**
+         * Set color name on the card
+         * @param name  Name to be displayed on the card
+         */
         private void setColorName(String name) {
             tvName.setText(name);
         }
