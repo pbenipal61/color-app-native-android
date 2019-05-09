@@ -49,7 +49,7 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
             @Override
             public void onClick(View v) {
                 MainActivity mainActivity = (MainActivity) context;
-                mainActivity.setAsBackgroundColor(Color.parseColor(colorItem.getColorString()), colorItem.getColorString());
+                mainActivity.setAsBackgroundColor(Color.parseColor(colorItem.getColorString()), colorItem.getColorString(), colorItem.getGeneralName());
             }
         });
 

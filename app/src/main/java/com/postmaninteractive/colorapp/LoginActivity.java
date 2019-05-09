@@ -45,12 +45,17 @@ public class LoginActivity extends AppCompatActivity {
     private ProgressBar progressBar;                        // ProgressBar reference
     private Button loginButton;                             // Login button reference
     private RelativeLayout rlMainLayout;                    // Main layout reference
-    private Snackbar serverConnectionFailedSnackBar = null; // Reference to server connection failed SnackBar
+    private String KEY_TOKEN = "apiToken";                  // Api token key for secure preferences
+    private String KEY_ID = "id";                           // id key for secure preferences
     private int triesToLoadStorageData = 0;                 // Number of times app has tried to load storage data
     private int triesToLogin = 0;                           // Number of times the app tried to login
     private int triesToGetStorageId = 0;                    // Number of times the app tried to get a storage id for the user
     private AlertDialog alertDialog;                        // AlertDialog to ask user if they want continue without saving data
     private Boolean askedUserForSaveMode = false;           // Track of if the user has been offered without save mode. The user if offered this mode only once
+    private LoginData loginData;                            // Stores username and password for logging in
+    private Snackbar badInternetConnectionSnackBar;         // Bad internet connection SnackBar
+    private Snackbar serverConnectionFailedSnackBar = null; // Reference to server connection failed SnackBar
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +65,6 @@ public class LoginActivity extends AppCompatActivity {
         rlMainLayout = findViewById(R.id.rlMainLayout);
         tvUpdate = findViewById(R.id.tvUpdate);
         progressBar = findViewById(R.id.progressBar);
-        loginButton = findViewById(R.id.loginButton);
 
         Retrofit retrofit = RetrofitHelper.generate();
         api = retrofit.create(Api.class);
@@ -80,20 +84,20 @@ public class LoginActivity extends AppCompatActivity {
         SecurePreferences securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
         editor = securePreferences.edit();
 
-        String token = securePreferences.getString("apiToken", "default");
-        int id = securePreferences.getInt("id", -1);
+        String token = securePreferences.getString(KEY_TOKEN, "default");
+        int id = securePreferences.getInt(KEY_ID, -1);
 
         if (token.equals("default") && id == -1) {
             progressBar.setVisibility(GONE);
 
+            // Asking to user to log in
+            loginButton = findViewById(R.id.loginButton);
             // Resize the Login button based on the screen dimensions
             LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) loginButton.getLayoutParams();
             params.height = ResizeHelper.getScreenDimensions(this)[1] / 10;
             params.width = ResizeHelper.getScreenDimensions(this)[0] / 2;
             loginButton.setLayoutParams(params);
-
             loginButton.setVisibility(View.VISIBLE);
-            // Message to notify user about logging in
             String loginMessage = "Login to continue";
             final Snackbar loginSnackBar = SnackBarHelper.generate(rlMainLayout, loginMessage, Snackbar.LENGTH_INDEFINITE);
             loginSnackBar.show();
@@ -114,9 +118,8 @@ public class LoginActivity extends AppCompatActivity {
 
         } else {
 
-            // If both id and token exists then the stored data is loaded from the storage
+            // If both id and token exists then the stored data is loaded from the storage on the server
             progressBar.setVisibility(View.VISIBLE);
-            loginButton.setVisibility(View.GONE);
             loadData(token, id);
         }
     }
@@ -130,8 +133,9 @@ public class LoginActivity extends AppCompatActivity {
 
         // Increments number of times login has been tried
         triesToLogin++;
-
-        LoginData loginData = new LoginData("fstest08", "mqG36jUr");
+        if(loginData == null) {
+            loginData = new LoginData("fstest08", "mqG36jUr");
+        }
         setProgressUpdateText("Logging in ...");
 
         // The login call to the server
@@ -140,10 +144,11 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call<LoginData.LoginResponse> call, @NonNull final Response<LoginData.LoginResponse> response) {
                 if (response.body() != null) {
+
                     // If appropriate response is noticed then received token is saved to the secure preferences
                     showFailedServerConnectionSnackBar(false);
                     LoginData.LoginResponse loginResponse = response.body();
-                    editor.putString("apiToken", loginResponse.getToken()).apply();
+                    editor.putString(KEY_TOKEN, loginResponse.getToken()).apply();
 
                     // This token is passed onto getStorageId function to get a new storage id
                     getStorageId(loginResponse.getToken());
@@ -154,8 +159,9 @@ public class LoginActivity extends AppCompatActivity {
                     // and user is notified about the situation
                     if (triesToLogin == numberOfTriesForConnectionCheck) {
                         if (!askedUserForSaveMode) {
-                            showWithoutSaveModeAlert(null, -1, ProcessParts.LOGIN);
+                            showWithoutSaveModeAlert("default", -1, ProcessParts.LOGIN);
                         } else {
+
                             // Another attempt to login is made if the login fails
                             login();
                         }
@@ -170,7 +176,7 @@ public class LoginActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call<LoginData.LoginResponse> call, @NonNull Throwable t) {
 
                 // If something goes wrong or the app fails to connect to internet then the user is notified
-                failedToConnect();
+                failedInternetConnection();
                 t.printStackTrace();
             }
         });
@@ -202,30 +208,31 @@ public class LoginActivity extends AppCompatActivity {
             public void onResponse(@NonNull  Call<StorageData.StorageDataResponse> call,@NonNull Response<StorageData.StorageDataResponse> response) {
 
 
-                    if (response.body() != null) {
+                if (response.body() != null) {
 
-                        // If appropriate response is found then id is saved
-                        showFailedServerConnectionSnackBar(false);
-                        StorageData.StorageDataResponse storageDataResponse = response.body();
-                        editor.putInt("id", storageDataResponse.getId()).apply();
-                        moveToMainActivity(storageDataResponse.getData(), true);
-                    } else {
+                    // If appropriate response is found then id is saved
+                    // If server connection SnackBar exists on the screen then its dismissed
+                    showFailedServerConnectionSnackBar(false);
+                    StorageData.StorageDataResponse storageDataResponse = response.body();
+                    editor.putInt(KEY_ID, storageDataResponse.getId()).apply();
+                    moveToMainActivity(storageDataResponse.getData(), true);
+                } else {
 
-                        // If appropriate response is not found then user is notified accordingly.
-                        // Another attempt to get id is made
-                        if (triesToGetStorageId == numberOfTriesForConnectionCheck) {
-                            if (!askedUserForSaveMode) {
-                                showWithoutSaveModeAlert(token, -1, ProcessParts.GET_STORAGE_ID);
-                            } else {
-
-                                // Another attempt to get id
-                                getStorageId(token);
-                            }
-                            showFailedServerConnectionSnackBar(true);
+                    // If appropriate response is not found then user is notified accordingly.
+                    // Another attempt to get id is made with appropriate process
+                    if (triesToGetStorageId == numberOfTriesForConnectionCheck) {
+                        if (!askedUserForSaveMode) {
+                            showWithoutSaveModeAlert(token, -1, ProcessParts.GET_STORAGE_ID);
                         } else {
+
+                            // Another attempt to get id
                             getStorageId(token);
                         }
+                        showFailedServerConnectionSnackBar(true);
+                    } else {
+                        getStorageId(token);
                     }
+                }
 
             }
 
@@ -233,7 +240,7 @@ public class LoginActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call2,@NonNull Throwable t2) {
 
                 // If something goes wrong or the app fails to connect to internet then the user is notified
-                failedToConnect();
+                failedInternetConnection();
                 t2.printStackTrace();
             }
         });
@@ -286,7 +293,7 @@ public class LoginActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call,@NonNull Throwable t) {
 
                 // If something goes wrong and the app fails to connect to internet then the user is notified
-                failedToConnect();
+                failedInternetConnection();
                 t.printStackTrace();
             }
         });
@@ -305,7 +312,7 @@ public class LoginActivity extends AppCompatActivity {
      * Kicks in when the application fails to connect to the server.
      * Makes the retry button visible
      */
-    private void failedToConnect() {
+    private void failedInternetConnection() {
 
         // ProgressBar is set to gone
         progressBar.setVisibility(GONE);
@@ -324,22 +331,27 @@ public class LoginActivity extends AppCompatActivity {
             public void onClick(View v) {
                 progressBar.setVisibility(View.VISIBLE);
                 retryButton.setVisibility(GONE);
+                badInternetConnectionSnackBar.dismiss();
                 initProcess();
             }
         });
-        setProgressUpdateText("");
-        retryButton.setVisibility(View.VISIBLE);
-        showFailedServerConnectionSnackBar(false);
 
         // User is notified by the retry button and the SnackBar this time and update TextView is set to an empty string
         setProgressUpdateText("");
-        showFailedServerConnectionSnackBar(true);
+        retryButton.setVisibility(View.VISIBLE);
+        if(badInternetConnectionSnackBar == null){
+            badInternetConnectionSnackBar = SnackBarHelper.generate(rlMainLayout, "Please check your internet connection.", Snackbar.LENGTH_INDEFINITE);
+        }
+        badInternetConnectionSnackBar.show();
+
+
     }
 
     /**
      * Utility function to load MainActivity
      *
      * @param lastSavedColor Color loaded from storage
+     * @param saveMode  Weather the user is accessing the MainActivity with save mode
      */
     private void moveToMainActivity(String lastSavedColor, Boolean saveMode) {
 
@@ -382,12 +394,11 @@ public class LoginActivity extends AppCompatActivity {
     /**
      * Utility method for creating alert to ask user if they want to continue without saving their data
      *
-     * @param token Token passed . Can be null
+     * @param token Token passed . Default is "default" or null
      * @param id    id passed . Cannot be null but can be -1 as equivalent of null
      * @param part  Part from where this dialog is called
      */
     private void showWithoutSaveModeAlert(final String token, final int id, final ProcessParts part) {
-        askedUserForSaveMode = true;
 
         // Builds the necessary dialog if needed
         if (alertDialog == null) {
@@ -428,9 +439,15 @@ public class LoginActivity extends AppCompatActivity {
         // Alert Dialog is shown
         alertDialog.show();
 
+        // askedUserForSaveMode is set to true
+        askedUserForSaveMode = true;
+
     }
 
-    private enum ProcessParts {                             // Parts of the entire logging process
+    /**
+     * Parts of the entire logging process
+     */
+    private enum ProcessParts {
         LOGIN, GET_STORAGE_ID, LOAD_DATA
     }
 }

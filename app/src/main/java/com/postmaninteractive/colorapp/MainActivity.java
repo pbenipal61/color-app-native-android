@@ -4,9 +4,7 @@ package com.postmaninteractive.colorapp;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.os.PersistableBundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBar;
@@ -14,7 +12,6 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -54,7 +51,11 @@ public class MainActivity extends AppCompatActivity {
     private String KEY_COLOR = "colorKey";                      // Used as key for saving to instance
     private String currentBGColorString;                        // Current background color string
     private String KEY_SAVE_MODE = "saveMode";                  // Save mode key reference
-
+    private String KEY_TOKEN = "apiToken";                      // Api token key for secure preferences
+    private String KEY_ID = "id";                               // id key for secure preferences
+    private AlertDialog deleteAlertDialog;                      // Alert dialog when user tries to reset the app
+    private SecurePreferences.Editor editor;                    // Secure preferences editor
+    private int numberOfTriesToDeleteStorage = 0;                   // Number of tries to delete storage
 
 
     @Override
@@ -140,8 +141,9 @@ public class MainActivity extends AppCompatActivity {
      * Saves data to the server
      *
      * @param colorString Color to be saved onto the server
+     * @param colorName General color name
      */
-    private void saveData(final String colorString) {
+    private void saveData(final String colorString, final String colorName) {
 
         // StorageData object is created to store newest color to the storage on the server
         StorageData storageData = new StorageData(colorString);
@@ -153,8 +155,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Token and id are fetched from the server
-        String token = securePreferences.getString("apiToken", "default");
-        int id = securePreferences.getInt("id", -1);
+        String token = securePreferences.getString(KEY_TOKEN, "default");
+        int id = securePreferences.getInt(KEY_ID, -1);
 
         // If token and id exists then process proceeds
         if (!token.equals("default") && id != -1) {
@@ -163,22 +165,23 @@ public class MainActivity extends AppCompatActivity {
             dataResponseCall.enqueue(new Callback<StorageData.StorageDataResponse>() {
                 @Override
                 public void onResponse(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Response<StorageData.StorageDataResponse> response) {
-                    if (response.body() != null) {
-                        showSnackBar(false);
+                    if (response.body() == null) {
+                        saveData(colorString, colorName);
                     } else {
-                        saveData(colorString);
+                        SnackBarHelper.generate(rlMainLayout, colorName +" was saved.", Snackbar.LENGTH_SHORT);
+                        showFailedInternetConnectionSnackBar(false);
                     }
                 }
                 @Override
                 public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Throwable t) {
-                    showSnackBar(true);
+                    showFailedInternetConnectionSnackBar(true);
                     t.printStackTrace();
                 }
             });
         } else {
 
             // If token and id doesn't exist then user is notified
-            SnackBarHelper.generate(rlMainLayout, "Something went wrong . Failed to communicate with the server.").show();
+            SnackBarHelper.generate(rlMainLayout, "Something was missing. Please login again").show();
         }
     }
 
@@ -211,26 +214,28 @@ public class MainActivity extends AppCompatActivity {
     private void showDeleteStorageAlert() {
 
         // Reset alert dialog is prepared and shown
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setTitle("Are you sure you want to reset the app?");
-        builder.setCancelable(true);
-        builder.setPositiveButton("Yep", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                progressBar.setVisibility(View.VISIBLE);
-                deleteStorage();
-            }
-        });
+        if(deleteAlertDialog == null) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("Are you sure you want to reset the app?");
+            builder.setCancelable(true);
+            builder.setPositiveButton("Yep", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    progressBar.setVisibility(View.VISIBLE);
+                    deleteStorage();
+                }
+            });
 
-        builder.setNegativeButton("Woops! Didn't mean to do that!", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
+            builder.setNegativeButton("Woops! Didn't mean to do that!", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                }
+            });
 
-        AlertDialog alertDialog = builder.create();
-        alertDialog.show();
+            deleteAlertDialog = builder.create();
+        }
+        deleteAlertDialog.show();
     }
 
     /**
@@ -238,6 +243,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void deleteStorage() {
 
+        numberOfTriesToDeleteStorage++;
         // SecurePreferences are prepared
         if (securePreferences == null) {
             SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD)
@@ -246,9 +252,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Editor for secure preferences is prepared
-        final SecurePreferences.Editor editor = securePreferences.edit();
-        String token = securePreferences.getString("apiToken", "default");
-        int id = securePreferences.getInt("id", -1);
+        if(editor == null) {
+            editor = securePreferences.edit();
+        }
+        String token = securePreferences.getString(KEY_TOKEN, "default");
+        int id = securePreferences.getInt(KEY_ID, -1);
 
         // Api call
         Call<String> call = api.deleteStorage(token, id);
@@ -258,17 +266,21 @@ public class MainActivity extends AppCompatActivity {
                 if (response.body() == null) {
 
                     // If failed to delete storage then another attempt is made
+                    if(numberOfTriesToDeleteStorage == 15){
+                        SnackBarHelper.generate(rlMainLayout, "Taking longer then expected. We'll keep on trying ...", Snackbar.LENGTH_INDEFINITE);
+                    }
                     deleteStorage();
                 } else {
 
                     // Secure preferences are updated with not valid values for token and id
-                    showSnackBar(false);
-                    editor.putString("apiToken", "default").apply();
-                    editor.putInt("id", -1).apply();
+                    showFailedInternetConnectionSnackBar(false);
+                    editor.putString(KEY_TOKEN, "default").apply();
+                    editor.putInt(KEY_ID, -1).apply();
 
                     // User is taken to LoginActivity to complete the reset process
                     Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                     startActivity(intent);
+                    finish();
                 }
             }
 
@@ -276,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call<String> call, @NonNull Throwable t) {
 
                 // If something goes wrong or app fails to connect to internet the user is notified
-                showSnackBar(true);
+                showFailedInternetConnectionSnackBar(true);
             }
         });
 
@@ -299,14 +311,15 @@ public class MainActivity extends AppCompatActivity {
      *
      * @param color       Color reference
      * @param colorString Color string
+     * @param colorName   General name for the color
      */
-    public void setAsBackgroundColor(int color, String colorString) {
+    public void setAsBackgroundColor(int color, String colorString, String colorName) {
 
         // Main background color is set since rlMainLayout is the main layout
         rlMainLayout.setBackgroundColor(color);
         currentBGColorString = colorString;
         if(saveMode) {
-            saveData(colorString);
+            saveData(colorString, colorName);
         }
     }
 
@@ -315,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
      *
      * @param toShow If to show the SnackBar or dismiss it
      */
-    private void showSnackBar(Boolean toShow) {
+    private void showFailedInternetConnectionSnackBar(Boolean toShow) {
         if (snackbar == null) {
             String message = "Failed to connect to the server. Please check internet connection.";
             snackbar = SnackBarHelper.generate(rlMainLayout, message, Snackbar.LENGTH_INDEFINITE);
