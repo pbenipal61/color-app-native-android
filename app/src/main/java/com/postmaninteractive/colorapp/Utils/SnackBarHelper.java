@@ -21,7 +21,7 @@ public class SnackBarHelper {
     }
 
     /**
-     * Creates a SnackBar
+     * Creates a {@link Snackbar}
      *
      * @param view View
      * @param message Message on the SnackBar

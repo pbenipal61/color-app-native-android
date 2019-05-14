@@ -12,6 +12,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -48,15 +49,15 @@ public class MainActivity extends AppCompatActivity {
     private Snackbar snackbar = null;                           // Reference to a SnackBar
     private ProgressBar progressBar;                            // Reference to the progress bar
     private Boolean saveMode;                                   // Check if running in save mode
-    private String KEY_COLOR = "colorKey";                      // Used as key for saving to instance
+    private final String KEY_COLOR = "colorKey";                // Used as key for saving to instance
     private String currentBGColorString;                        // Current background color string
-    private String KEY_SAVE_MODE = "saveMode";                  // Save mode key reference
-    private String KEY_TOKEN = "apiToken";                      // Api token key for secure preferences
-    private String KEY_ID = "id";                               // id key for secure preferences
+    private final String KEY_TOKEN = "apiToken";                // Api token key for secure preferences
+    private final String KEY_ID = "id";                         // id key for secure preferences
     private AlertDialog deleteAlertDialog;                      // Alert dialog when user tries to reset the app
     private SecurePreferences.Editor editor;                    // Secure preferences editor
-    private int numberOfTriesToDeleteStorage = 0;                   // Number of tries to delete storage
-
+    private int numberOfTriesToDeleteStorage = 0;               // Number of tries to delete storage
+    private String token;                                       // API token
+    private Integer id;                                             // Storage id
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,6 +111,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Mode is checked and user is notified if needed
+        // Save mode key reference
+        String KEY_SAVE_MODE = "saveMode";
         saveMode = getIntent().getBooleanExtra(KEY_SAVE_MODE, false);
         if(!saveMode){
             SnackBarHelper.generate(rlMainLayout, getString(R.string.main_activity_notif_without_savemode), Snackbar.LENGTH_LONG).show();
@@ -168,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
                     if (response.body() == null) {
                         saveData(colorString, colorName);
                     } else {
-                        SnackBarHelper.generate(rlMainLayout, colorName +" was saved.", Snackbar.LENGTH_SHORT);
+                        SnackBarHelper.generate(rlMainLayout, colorName +" was saved.", Snackbar.LENGTH_SHORT).show();
                         showFailedInternetConnectionSnackBar(false);
                     }
                 }
@@ -238,6 +241,7 @@ public class MainActivity extends AppCompatActivity {
         deleteAlertDialog.show();
     }
 
+
     /**
      * Deletes the storage on the server and resets the application
      */
@@ -255,15 +259,25 @@ public class MainActivity extends AppCompatActivity {
         if(editor == null) {
             editor = securePreferences.edit();
         }
-        String token = securePreferences.getString(KEY_TOKEN, "default");
-        int id = securePreferences.getInt(KEY_ID, -1);
+        if(token == null) {
+            token = securePreferences.getString(KEY_TOKEN, "default");
+        }
+        if(id == null) {
+            id = securePreferences.getInt(KEY_ID, -1);
+        }
+
+        // Even if server fails to delete storage , the stored data is cleared from the device and the application is reset for the user immediately
+        editor.putString(KEY_TOKEN, "default").apply();
+        editor.putInt(KEY_ID, -1).apply();
 
         // Api call
         Call<String> call = api.deleteStorage(token, id);
         call.enqueue(new Callback<String>() {
             @Override
             public void onResponse(@NonNull Call<String> call, @NonNull Response<String> response) {
-                if (response.body() == null) {
+
+                Log.d(TAG, "onResponse: "+ response);
+                if (!response.body().toLowerCase().equals("ok")) {
 
                     // If failed to delete storage then another attempt is made
                     if(numberOfTriesToDeleteStorage == 15){
@@ -274,9 +288,6 @@ public class MainActivity extends AppCompatActivity {
 
                     // Secure preferences are updated with not valid values for token and id
                     showFailedInternetConnectionSnackBar(false);
-                    editor.putString(KEY_TOKEN, "default").apply();
-                    editor.putInt(KEY_ID, -1).apply();
-
                     // User is taken to LoginActivity to complete the reset process
                     Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                     startActivity(intent);
@@ -287,6 +298,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call<String> call, @NonNull Throwable t) {
 
+                t.printStackTrace();
                 // If something goes wrong or app fails to connect to internet the user is notified
                 showFailedInternetConnectionSnackBar(true);
             }

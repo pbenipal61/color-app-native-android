@@ -1,5 +1,6 @@
 package com.postmaninteractive.colorapp;
 
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -8,7 +9,9 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -19,7 +22,6 @@ import com.github.hussainderry.securepreferences.model.SecurityConfig;
 import com.postmaninteractive.colorapp.Models.LoginData;
 import com.postmaninteractive.colorapp.Models.StorageData;
 import com.postmaninteractive.colorapp.Utils.Api;
-import com.postmaninteractive.colorapp.Utils.ResizeHelper;
 import com.postmaninteractive.colorapp.Utils.RetrofitHelper;
 import com.postmaninteractive.colorapp.Utils.SnackBarHelper;
 
@@ -33,34 +35,37 @@ import retrofit2.Retrofit;
 
 import static android.provider.Telephony.Carriers.PASSWORD;
 import static android.provider.Telephony.Mms.Part.FILENAME;
-import static android.view.View.GONE;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private static final String TAG = "LoginActivity";      // Tag for logs
+//    private static final String TAG = "LoginActivity";      // Tag for logs
     private final int numberOfTriesForConnectionCheck = 15; // Number of times app should try to make a connection with the user before notifying the user
+    private SecurePreferences securePreferences;            // Secure preferences
     private SecurePreferences.Editor editor;                // Editor for secure preferences
     private Api api;                                        // Reference to api interface
     private TextView tvUpdate;                              // Update TextView reference
     private ProgressBar progressBar;                        // ProgressBar reference
     private Button loginButton;                             // Login button reference
     private RelativeLayout rlMainLayout;                    // Main layout reference
-    private String KEY_TOKEN = "apiToken";                  // Api token key for secure preferences
-    private String KEY_ID = "id";                           // id key for secure preferences
+    private LinearLayout upLayout;                          // Username password fields in a linear layout
+    private EditText etvUsername;                           // Username EditText
+    private EditText etvPassword;                           // Password EditText
+    private final String KEY_TOKEN = "apiToken";            // Api token key for secure preferences
+    private final String KEY_ID = "id";                     // id key for secure preferences
     private int triesToLoadStorageData = 0;                 // Number of times app has tried to load storage data
     private int triesToLogin = 0;                           // Number of times the app tried to login
     private int triesToGetStorageId = 0;                    // Number of times the app tried to get a storage id for the user
     private AlertDialog alertDialog;                        // AlertDialog to ask user if they want continue without saving data
     private Boolean askedUserForSaveMode = false;           // Track of if the user has been offered without save mode. The user if offered this mode only once
-    private LoginData loginData;                            // Stores username and password for logging in
     private Snackbar badInternetConnectionSnackBar;         // Bad internet connection SnackBar
-    private Snackbar serverConnectionFailedSnackBar = null; // Reference to server connection failed SnackBar
-
+    private Snackbar serverConnectionFailedSnackBar;        // Reference to server connection failed SnackBar
+    private Snackbar incorrectCredentialsSnackBar;          // Incorrect credentials on login response SnackBar
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
 
         rlMainLayout = findViewById(R.id.rlMainLayout);
         tvUpdate = findViewById(R.id.tvUpdate);
@@ -81,22 +86,34 @@ public class LoginActivity extends AppCompatActivity {
         SecurityConfig minimumConfig = new SecurityConfig.Builder(PASSWORD).build();
 
         // Creates secure preferences based on provided config if needed otherwise uses one if already exists
-        SecurePreferences securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
+        securePreferences = SecurePreferences.getInstance(this, FILENAME, minimumConfig);
         editor = securePreferences.edit();
+
+        processController();
+    }
+
+    /**
+     * Controls various steps of the process
+     */
+    private void processController(){
 
         String token = securePreferences.getString(KEY_TOKEN, "default");
         int id = securePreferences.getInt(KEY_ID, -1);
 
-        if (token.equals("default") && id == -1) {
-            progressBar.setVisibility(GONE);
 
+        //  Uncomment the following block to hardcode the storage id
+//                int id = 211;
+//                editor.putInt("id", 211).apply();
+
+        if (token.equals("default")) {
+            progressBar.setVisibility(View.GONE);
+            // Show the login form
+            upLayout  =findViewById(R.id.upLayout);
+            upLayout.setVisibility(View.VISIBLE);
             // Asking to user to log in
-            loginButton = findViewById(R.id.loginButton);
-            // Resize the Login button based on the screen dimensions
-            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) loginButton.getLayoutParams();
-            params.height = ResizeHelper.getScreenDimensions(this)[1] / 10;
-            params.width = ResizeHelper.getScreenDimensions(this)[0] / 2;
-            loginButton.setLayoutParams(params);
+            if(loginButton == null) {
+                loginButton = findViewById(R.id.loginButton);
+            }
             loginButton.setVisibility(View.VISIBLE);
             String loginMessage = "Login to continue";
             final Snackbar loginSnackBar = SnackBarHelper.generate(rlMainLayout, loginMessage, Snackbar.LENGTH_INDEFINITE);
@@ -105,22 +122,29 @@ public class LoginActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     loginSnackBar.dismiss();
-                    loginButton.setVisibility(View.GONE);
+                    upLayout.setVisibility(View.GONE);
                     progressBar.setVisibility(View.VISIBLE);
-
+                    tvUpdate.setVisibility(View.VISIBLE);
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(loginButton.getWindowToken(),0);
                     login();
                 }
             });
+
+
         } else if (id == -1) {
 
             // If token already exists and id doesn't then a storage id is fetched
+            progressBar.setVisibility(View.VISIBLE);
             getStorageId(token);
+
 
         } else {
 
             // If both id and token exists then the stored data is loaded from the storage on the server
             progressBar.setVisibility(View.VISIBLE);
             loadData(token, id);
+
         }
     }
 
@@ -133,9 +157,17 @@ public class LoginActivity extends AppCompatActivity {
 
         // Increments number of times login has been tried
         triesToLogin++;
-        if(loginData == null) {
-            loginData = new LoginData("fstest08", "mqG36jUr");
+
+        // Login data is structured
+        if(etvPassword == null ) {
+            etvPassword = findViewById(R.id.etvPassword);
         }
+        if(etvUsername == null) {
+            etvUsername = findViewById(R.id.etvUsername);
+        }
+
+        LoginData loginData = new LoginData(etvUsername.getText().toString(), etvPassword.getText().toString());
+
         setProgressUpdateText("Logging in ...");
 
         // The login call to the server
@@ -143,18 +175,33 @@ public class LoginActivity extends AppCompatActivity {
         loginCall.enqueue(new Callback<LoginData.LoginResponse>() {
             @Override
             public void onResponse(@NonNull Call<LoginData.LoginResponse> call, @NonNull final Response<LoginData.LoginResponse> response) {
+
                 if (response.body() != null) {
 
-                    // If appropriate response is noticed then received token is saved to the secure preferences
-                    showFailedServerConnectionSnackBar(false);
-                    LoginData.LoginResponse loginResponse = response.body();
-                    editor.putString(KEY_TOKEN, loginResponse.getToken()).apply();
+                        // If appropriate response is noticed then received token is saved to the secure preferences
+                        showFailedServerConnectionSnackBar(false);
+                        LoginData.LoginResponse loginResponse = response.body();
+                        editor.putString(KEY_TOKEN, loginResponse.getToken()).apply();
 
-                    // This token is passed onto getStorageId function to get a new storage id
-                    getStorageId(loginResponse.getToken());
+                        // Check with process controller
+                        processController();
 
                 } else {
 
+                    // Check if login failed and take necessary steps
+                    if(response.code() >= 400 && response.code() < 500){
+
+                        upLayout.setVisibility(View.VISIBLE);
+                        progressBar.setVisibility(View.GONE);
+                        tvUpdate.setVisibility(View.GONE);
+
+                        if(incorrectCredentialsSnackBar == null){
+                            incorrectCredentialsSnackBar = SnackBarHelper.generate(rlMainLayout, "Incorrect credentials!");
+                        }
+                        incorrectCredentialsSnackBar.show();
+
+                        return;
+                    }
                     // If appropriate response isn't noticed then number of tries for login is checked
                     // and user is notified about the situation
                     if (triesToLogin == numberOfTriesForConnectionCheck) {
@@ -205,7 +252,7 @@ public class LoginActivity extends AppCompatActivity {
         Call<StorageData.StorageDataResponse> getStorageIdCall = api.getStorageId(token, storageIdCallBody);
         getStorageIdCall.enqueue(new Callback<StorageData.StorageDataResponse>() {
             @Override
-            public void onResponse(@NonNull  Call<StorageData.StorageDataResponse> call,@NonNull Response<StorageData.StorageDataResponse> response) {
+            public void onResponse(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Response<StorageData.StorageDataResponse> response) {
 
 
                 if (response.body() != null) {
@@ -237,7 +284,7 @@ public class LoginActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call2,@NonNull Throwable t2) {
+            public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call2, @NonNull Throwable t2) {
 
                 // If something goes wrong or the app fails to connect to internet then the user is notified
                 failedInternetConnection();
@@ -264,7 +311,7 @@ public class LoginActivity extends AppCompatActivity {
         Call<StorageData.StorageDataResponse> storageDataResponseCall = api.getData(token, id);
         storageDataResponseCall.enqueue(new Callback<StorageData.StorageDataResponse>() {
             @Override
-            public void onResponse(@NonNull Call<StorageData.StorageDataResponse> call,@NonNull Response<StorageData.StorageDataResponse> response) {
+            public void onResponse(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Response<StorageData.StorageDataResponse> response) {
                 if (response.body() != null) {
 
                     // If appropriate response is found then the stored data is passed onto MainActivity as a color string
@@ -290,7 +337,7 @@ public class LoginActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call,@NonNull Throwable t) {
+            public void onFailure(@NonNull Call<StorageData.StorageDataResponse> call, @NonNull Throwable t) {
 
                 // If something goes wrong and the app fails to connect to internet then the user is notified
                 failedInternetConnection();
@@ -315,22 +362,15 @@ public class LoginActivity extends AppCompatActivity {
     private void failedInternetConnection() {
 
         // ProgressBar is set to gone
-        progressBar.setVisibility(GONE);
+        progressBar.setVisibility(View.GONE);
 
-        // Retry button is resized according to the dimensions of the screen
+        // Retry button
         final Button retryButton = findViewById(R.id.retryButton);
-        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) retryButton.getLayoutParams();
-        int[] dims = ResizeHelper.getScreenDimensions(this);
-        if (params.height != dims[1] / 10 || params.width != dims[0] / 2) {
-            params.height = dims[1] / 10;
-            params.width = dims[0] / 2;
-            retryButton.setLayoutParams(params);
-        }
         retryButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 progressBar.setVisibility(View.VISIBLE);
-                retryButton.setVisibility(GONE);
+                retryButton.setVisibility(View.GONE);
                 badInternetConnectionSnackBar.dismiss();
                 initProcess();
             }
@@ -339,7 +379,7 @@ public class LoginActivity extends AppCompatActivity {
         // User is notified by the retry button and the SnackBar this time and update TextView is set to an empty string
         setProgressUpdateText("");
         retryButton.setVisibility(View.VISIBLE);
-        if(badInternetConnectionSnackBar == null){
+        if (badInternetConnectionSnackBar == null) {
             badInternetConnectionSnackBar = SnackBarHelper.generate(rlMainLayout, "Please check your internet connection.", Snackbar.LENGTH_INDEFINITE);
         }
         badInternetConnectionSnackBar.show();
@@ -351,7 +391,7 @@ public class LoginActivity extends AppCompatActivity {
      * Utility function to load MainActivity
      *
      * @param lastSavedColor Color loaded from storage
-     * @param saveMode  Weather the user is accessing the MainActivity with save mode
+     * @param saveMode       Weather the user is accessing the MainActivity with save mode
      */
     private void moveToMainActivity(String lastSavedColor, Boolean saveMode) {
 

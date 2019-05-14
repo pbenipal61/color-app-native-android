@@ -1,61 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rlMainLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".LoginActivity"
-    android:id="@+id/rlMainLayout">
+    tools:context=".LoginActivity">
 
     <LinearLayout
-        android:layout_centerInParent="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
         android:orientation="vertical">
 
         <ProgressBar
-            android:layout_gravity="center"
+            android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/progressBar"
-            android:visibility="visible"
-            />
+            android:layout_gravity="center"
+            android:visibility="visible" />
 
         <Button
-            android:background="@drawable/login_event_shape"
-            android:shadowRadius="5"
-            android:visibility="gone"
-            android:layout_gravity="center"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/login_activity_button_height"
             android:id="@+id/retryButton"
-            android:text="@string/retry"
-            android:textSize="@dimen/login_activity_button_text_size"
-            android:textColor="@color/white"
-            android:textAllCaps="false"/>
-        <Button
-
-            android:text="@string/login"
-            android:textColor="@color/white"
-            android:textSize="@dimen/login_activity_button_text_size"
-            android:id="@+id/loginButton"
-            android:layout_gravity="center"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/login_activity_button_height"
+            android:layout_gravity="center"
             android:background="@drawable/login_event_shape"
             android:shadowRadius="5"
-            android:visibility="gone"
+            android:text="@string/retry"
             android:textAllCaps="false"
-            />
+            android:textColor="@color/white"
+            android:textSize="@dimen/login_activity_button_text_size"
+            android:visibility="gone" />
 
+        <LinearLayout
+            android:id="@+id/upLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="@dimen/activity_login_margin"
+                android:textSize="@dimen/login_activity_button_text_size"
+                android:text="@string/welcome_to_the_app_of_the_year_the_color_app"/>
+            <EditText
+                android:id="@+id/etvUsername"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/login_activity_button_height"
+                android:layout_marginStart="@dimen/activity_login_margin"
+                android:layout_marginEnd="@dimen/activity_login_margin"
+                android:hint="username"
+                android:inputType="text" />
+
+            <EditText
+                android:id="@+id/etvPassword"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/login_activity_button_height"
+                android:layout_marginStart="@dimen/activity_login_margin"
+                android:layout_marginEnd="@dimen/activity_login_margin"
+                android:hint="password"
+                android:inputType="textPassword" />
+
+            <Button
+                android:id="@+id/loginButton"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/login_activity_button_height"
+                android:layout_gravity="center"
+                android:layout_marginTop="@dimen/activity_login_margin"
+                android:layout_marginStart="@dimen/activity_login_margin"
+                android:layout_marginEnd="@dimen/activity_login_margin"
+                android:background="@drawable/login_event_shape"
+                android:shadowRadius="1"
+                android:text="@string/login"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="@dimen/login_activity_button_text_size" />
+
+
+
+        </LinearLayout>
 
         <TextView
 
-            android:textSize="22sp"
-            android:layout_gravity="center"
+            android:id="@+id/tvUpdate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/tvUpdate"
-            android:text="@string/login_to_continue"/>
+            android:layout_gravity="center"
+            android:text="@string/login_to_continue"
+            android:textSize="22sp" />
     </LinearLayout>
 
 </RelativeLayout>

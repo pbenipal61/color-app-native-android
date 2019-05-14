@@ -2,9 +2,10 @@
     <string name="app_name">Color App</string>
     <string name="logging_in">logging in …</string>
     <string name="login_to_continue"></string>
-    <string name="login">tap to login</string>
-    <string name="retry">tap to retry</string>
+    <string name="login">Tap to Login</string>
+    <string name="retry">Tap to Retry</string>
     <string name="menu_bar_reset">Reset</string>
     <string name="main_activity_notif_without_savemode">Please mind that any changes won\'t be saved to the server.</string>
+    <string name="welcome_to_the_app_of_the_year_the_color_app">Welcome to the app of the year 2019-\nThe Color App!</string>
 
 </resources>

@@ -21,7 +21,6 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
     private final Context context;              // Reference to the context this adapter is initiated
     private final List<ColorItem> colorItems;   // List of all color items to be presented in the recycler view
 
-
     /**
      * Creates adapter
      * @param context   // Context from where this constructor is called
@@ -60,10 +59,10 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
         return colorItems.size();
     }
 
-    public static class ColorItemViewHolder extends RecyclerView.ViewHolder {
+    static class ColorItemViewHolder extends RecyclerView.ViewHolder {
 
-        public final CardView cvColor;
-        public final TextView tvName;
+        final CardView cvColor;
+        final TextView tvName;
 
         /**
          * Creates an object
