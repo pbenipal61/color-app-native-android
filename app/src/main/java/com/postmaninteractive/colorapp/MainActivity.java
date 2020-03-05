@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private SecurePreferences.Editor editor;                    // Secure preferences editor
     private int numberOfTriesToDeleteStorage = 0;               // Number of tries to delete storage
     private String token;                                       // API token
-    private Integer id;                                             // Storage id
+    private Integer id;                                         // Storage id
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

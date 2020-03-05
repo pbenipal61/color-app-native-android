@@ -14,7 +14,7 @@ public class SnackBarHelper {
      */
     public static Snackbar generate(View view, String message) {
         if (view != null && message != null) {
-            return Snackbar.make(view, message, Snackbar.LENGTH_LONG);
+            return generate(view, message, Snackbar.LENGTH_LONG);
         }else{
             throw new NullPointerException("view and message not provided for making a SnackBar");
         }

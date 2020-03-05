@@ -102,7 +102,7 @@ public class LoginActivity extends AppCompatActivity {
 
 
         //  Uncomment the following block to hardcode the storage id
-//                int id = 211;
+//                id = 211;
 //                editor.putInt("id", 211).apply();
 
         if (token.equals("default")) {

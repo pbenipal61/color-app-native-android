@@ -6,7 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitHelper {
 
-    private static final String baseUrl = "https://cld8zbgxoc.execute-api.eu-central-1.amazonaws.com/api/v1/";    // Base URL for the api
+    private static final String baseUrl = "https://54t9f06ot1.execute-api.eu-central-1.amazonaws.com/api/v1/";    // Base URL for the api
     /**
      * Creates a Retrofit object
      * @return  Retrofit object
