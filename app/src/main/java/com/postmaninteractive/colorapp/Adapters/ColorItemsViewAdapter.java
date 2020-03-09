@@ -42,15 +42,17 @@ public class ColorItemsViewAdapter extends RecyclerView.Adapter<ColorItemsViewAd
     public void onBindViewHolder(@NonNull ColorItemViewHolder colorItemViewHolder, int i) {
 
         final ColorItem colorItem = colorItems.get(i);
-        colorItemViewHolder.setBackgroundColor(colorItem.getColorString());
-        colorItemViewHolder.setColorName(colorItem.getGeneralName());
-        colorItemViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                MainActivity mainActivity = (MainActivity) context;
-                mainActivity.setAsBackgroundColor(Color.parseColor(colorItem.getColorString()), colorItem.getColorString(), colorItem.getGeneralName());
-            }
-        });
+        if(colorItem.isValid()) {
+            colorItemViewHolder.setBackgroundColor(colorItem.getColorString());
+            colorItemViewHolder.setColorName(colorItem.getGeneralName());
+            colorItemViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    MainActivity mainActivity = (MainActivity) context;
+                    mainActivity.setAsBackgroundColor(Color.parseColor(colorItem.getColorString()), colorItem.getColorString(), colorItem.getGeneralName());
+                }
+            });
+        }
 
     }
 
