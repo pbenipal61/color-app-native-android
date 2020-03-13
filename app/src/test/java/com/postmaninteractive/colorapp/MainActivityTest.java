@@ -9,16 +9,24 @@ import com.postmaninteractive.colorapp.Adapters.ColorItemsViewAdapter;
 
 import org.junit.Assert;
 import org.junit.Rule;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
 
 import static org.hamcrest.Matchers.instanceOf;
 
+
 @MediumTest
+@RunWith(RobolectricTestRunner.class)
 public class MainActivityTest {
 
     @Rule
     public ActivityTestRule<MainActivity> rule = new ActivityTestRule<>(MainActivity.class);
 
+    /**
+     * Test for presence of recycler view
+     * @throws Exception
+     */
     @Test
     public void ensureRecyclerViewIsPresent() throws Exception {
         MainActivity activity = rule.getActivity();

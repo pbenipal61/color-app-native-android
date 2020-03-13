@@ -14,12 +14,17 @@ class LoginDataTest {
         loginData = new LoginData(username, password);
     }
 
+    /**
+     * Test for username getter
+     */
     @Test
     void testUsername(){
         Assert.assertEquals(username, loginData.getUsername());
     }
 
-
+    /**
+     * Test for password getter
+     */
     @Test
     void testPassword(){
         Assert.assertEquals(password, loginData.getPassword());

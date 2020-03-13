@@ -1,7 +1,6 @@
 package com.postmaninteractive.colorapp.Models;
 
 import org.junit.Assert;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,20 +15,25 @@ class ColorItemTest {
 
     }
 
-    @AfterEach
-    void tearDown() {
-    }
-
+    /**
+     * Test for getter for colorString
+     */
     @Test
     void testColorString(){
         Assert.assertEquals(colorString, colorItem.getColorString());
     }
 
+    /**
+     * Test for getter for generalName
+     */
     @Test
     void testGeneralName(){
         Assert.assertEquals(generalName, colorItem.getGeneralName());
     }
 
+    /**
+     * Test for incorrect result expectation from the getter
+     */
     @Test
     void testIncorrectExpectation(){
         Assert.assertNotSame(colorString, generalName);

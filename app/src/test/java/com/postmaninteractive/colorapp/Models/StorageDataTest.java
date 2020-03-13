@@ -4,8 +4,6 @@ import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 class StorageDataTest {
 
     private String data = "kjhvjh";
@@ -17,6 +15,9 @@ class StorageDataTest {
 
     }
 
+    /**
+     * Test for data getter
+     */
     @Test
     void testData(){
         Assert.assertEquals(data, storageData.getData());
