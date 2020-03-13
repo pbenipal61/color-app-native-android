@@ -4,8 +4,6 @@ import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 class LoginDataTest {
 
     private String username = "username";
@@ -20,7 +18,6 @@ class LoginDataTest {
     void testUsername(){
         Assert.assertEquals(username, loginData.getUsername());
     }
-
 
 
     @Test
